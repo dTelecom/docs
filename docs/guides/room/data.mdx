@@ -1,0 +1,54 @@
+---
+title: Working with data
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+With dTelecom maintaining room state, you can use it to pass around custom application data. We have a flexible system that enables you to pass messages from both the backend, and between participants.
+
+## Participant metadata
+
+dTelecom participants have a `metadata` field that you could use to store application-specific data. For example, this could be the seat number around a table, or other participant-specific state.
+
+Metadata is encoded in the [access token](/guides/access-tokens) that participants use to connect to the room.
+
+## Data messages
+
+From clients dTelecom lets you publish arbitrary data messages to any participants in the room via the `LocalParticipant.publishData` API. Room data is published to the SFU via WebRTC data channels; and server would forward that data to one or more participants in the room.
+
+Since the data is sent via UDP, you have a flexibility in regard to the reliability of delivery. We support both reliable and lossy. In reliable mode, your packets will be retransmitted until they are received. For use-cases such as in-room chat, this is preferable.
+
+When using lossy delivery, we suggest keeping data packets small (under network MTU of 1.4k). If a message is packetized into multiple packets, and a single packet doesn't arrive, your client will not receive the message at all.
+
+<Tabs
+  defaultValue="typescript"
+  groupId="client-sdk"
+  values={[
+    {label: 'Browser', value: 'typescript'},
+  ]}>
+  <TabItem value="typescript">
+
+```typescript title="TypeScript"
+const strData = JSON.stringify({some: "data"})
+const encoder = new TextEncoder()
+const decoder = new TextDecoder()
+
+// publishData takes in a Uint8Array, so we need to convert it
+const data = encoder.encode(strData);
+
+// publish to everyone in the room
+room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE)
+
+// publish to specific participants
+room.localParticipant.publishData(data, DataPacket_Kind.LOSSY, ['participant_sid'])
+
+// receive data from other participants
+room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant: Participant, kind: DataPacket_Kind) => {
+  const strData = decoder.decode(payload)
+  ...
+})
+```
+
+  </TabItem>
+
+</Tabs>

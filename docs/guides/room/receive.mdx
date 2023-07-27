@@ -1,0 +1,187 @@
+---
+title: Receiving media
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+While connected to a room, the server may send down one or more audio/video/data tracks at any time. By default, a client automatically subscribes to a received track, and lets your app know by invoking callbacks on the room object and associated participant who published the track.
+
+## Track subscription
+
+Receiving tracks from the server starts with a subscription.
+
+As mentioned in our guide on [publishing media](/guides/room/publish), dTelecom models tracks with two constructs: `TrackPublication` and `Track`. Think of a `TrackPublication` as metadata for a track registered with the server and `Track` as the raw media stream.
+
+Track subscription callbacks provide your app with both the `Track` and `TrackPublication` objects.
+
+Subscribed callback will be fired on both `Room` and `RemoteParticipant` objects.
+
+<Tabs
+  defaultValue="typescript"
+  groupId="client-sdk"
+  values={[
+    {label: 'Browser', value: 'typescript'},
+    {label: 'React', value: 'react'},
+  ]}>
+
+  <TabItem value="typescript">
+
+  ```typescript title="TypeScript"
+  import {
+    connect,
+    RoomEvent,
+  } from '@dTelecom/client-sdk-js';
+
+  connect('ws://your_host', token, {
+    audio: true,
+    video: true,
+  }).then((room) => {
+    room
+      .on(RoomEvent.TrackSubscribed, handleTrackSubscribed)
+  });
+
+  function handleTrackSubscribed(
+    track: RemoteTrack,
+    publication: RemoteTrackPublication,
+    participant: RemoteParticipant
+  ) {
+    /* do things with track, publication or participant */
+  }
+  ```
+
+  </TabItem>
+  <TabItem value="react">
+
+```typescript title="TypeScript"
+import { useParticipant } from '@dtelecom/components-react';
+
+export const MyComponent = ({ participant }) => {
+  const { subscribedTracks } = useParticipant(participant);
+  ...
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Media playback
+
+Once subscribed to an audio or video track, a client usually wants to start playback of the live stream:
+
+<Tabs
+  defaultValue="typescript"
+  groupId="client-sdk"
+  values={[
+    {label: 'Browser', value: 'typescript'},
+    {label: 'React', value: 'react'},
+  ]}>
+
+  <TabItem value="typescript">
+
+  ```typescript title="TypeScript"
+  function handleTrackSubscribed(
+    track: RemoteTrack,
+    publication: RemoteTrackPublication,
+    participant: RemoteParticipant
+  ) {
+    // attach track to a new HTMLVideoElement or HTMLAudioElement
+    const element = track.attach();
+    parentElement.appendChild(element);
+    // or attach to existing element
+    // track.attach(element)
+  }
+  ```
+
+  </TabItem>
+  <TabItem value="react">
+
+```tsx title="TypeScript"
+export const MyComponent = ({audioTrack, videoTrack}) => {
+  return (
+    <div>
+      <VideoRenderer track={videoTrack} isLocal={false} />
+      <AudioRenderer track={audioTrack} isLocal={false} />
+    </div>
+  )
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Speaker detection
+
+When audio tracks are published, dTelecom will detect participants whome are speaking. Speaker updates are sent for both local and remote participants. They will fire on both, Room and Participant objects.
+
+## Subscriber controls
+
+While the default behavior for dTelecom clients is to subscribe to all newly published tracks, dTelecom supports selective subscription.
+Client APIs are available to setup a connection for selective subscription and once configured, only explicitly subscribed tracks are sent down to the client.
+
+### Client-side selective subscription
+
+<Tabs
+  defaultValue="typescript"
+  groupId="client-sdk"
+  values={[
+    {label: 'Browser', value: 'typescript'},
+  ]}>
+
+  <TabItem value="typescript">
+
+  ```typescript title="TypeScript"
+  let room = await room.connect(url, token, {
+    autoSubscribe: false,
+  })
+
+  room.on(RoomEvent.TrackPublished, (track, publication, participant) => {
+    publication.setSubscribed(true)
+  })
+  ```
+
+  </TabItem>
+
+</Tabs>
+
+
+## Simulcast controls
+
+If a video track has simulcast enabled, a receiving client may want to manually specify the maximum receivable quality. This would result a quality and bandwidth reduction for the target track. This might come in handy, for instance, when an application's user interface is displaying a small thumbnail for a particular user's video track.
+
+<Tabs
+  defaultValue="typescript"
+  groupId="client-sdk"
+  values={[
+    {label: 'Browser', value: 'typescript'},
+  ]}>
+
+  <TabItem value="typescript">
+
+  ```typescript title="TypeScript"
+  import {
+    connect,
+    RoomEvent,
+  } from '@dTelecom/client-sdk-js';
+
+  connect('ws://your_host', token, {
+    audio: true,
+    video: true,
+  }).then((room) => {
+    room
+      .on(RoomEvent.TrackSubscribed, handleTrackSubscribed)
+  });
+
+  function handleTrackSubscribed(
+    track: RemoteTrack,
+    publication: RemoteTrackPublication,
+    participant: RemoteParticipant
+  ) {
+    if (track.kind === Track.Kind.Video) {
+      publication.setVideoQuality(VideoQuality.LOW)
+    }
+  }
+  ```
+
+  </TabItem>
+
+</Tabs>

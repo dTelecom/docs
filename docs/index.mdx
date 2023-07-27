@@ -1,0 +1,42 @@
+---
+title: dTelecom
+sidebar_label: Home
+slug: /
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+dTelecom is an open source project that provides scalable, multi-user conferencing over WebRTC. It's designed to give you everything you need to build real-time audio and/or video experiences in your applications.
+
+## Features
+
+- Horizontally-scalable WebRTC Selective Forwarding Unit (SFU)
+- Modern, full-featured [client SDKs](/references/client-sdks) for JavaScript, React
+- Built for production - JWT authentication and [server APIs](/guides/server-api)
+- Robust networking & connectivity over UDP, TCP, and built-in TURN
+- Advanced features like speaker detection, simulcast, selective subscription, and moderation APIs
+
+## Client Examples
+
+<Tabs
+  defaultValue="react"
+  groupId="client-sdk"
+  values={[
+    {label: 'React', value: 'react'},
+  ]}>
+  <TabItem value="react">
+
+```typescript title="TypeScript"
+import { LiveKitRoom, VideoConference } from '@dtelecom/components-react';
+
+export function App() {
+  return (
+    <LiveKitRoom token="<access-token>" serverUrl="<dtelecom-url>" connect={true}>
+      <VideoConference />
+    </LiveKitRoom>
+  );
+}
+```
+
+  </TabItem>
+</Tabs>

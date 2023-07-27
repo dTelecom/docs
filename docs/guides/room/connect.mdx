@@ -1,0 +1,38 @@
+---
+title: Connection and callbacks
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+A room is the main construct in dTelecom. Upon successful connection, you're provided a room object to interact with. The two key properties on a room object are the **LocalParticipant** object, representing the current user, and **RemoteParticipants**, an array of other users in the room.
+
+You can also listen for room events. Your callbacks will be invoked whenever various states of the room change.
+
+For events happening to a specific participant, they will also be fired on the appropriate `RemoteParticipant` or `LocalParticipant` object.
+
+## Connecting to a room
+
+Connecting to a room requires two parameters: a `url` and a `token`.
+
+The `token` is an access token representing the particular local participant. 
+
+## Leaving a room
+
+When your client is leaving a room, you should notify dTelecom of leave events by calling `Room.disconnect()`. If the application is closed without notifying the dTelecom, it will continue to display the participant as being in the room for more than 20 seconds.
+
+## Connectivity
+
+dTelecom configures WebRTC to enable connectivity from a wide variety of network conditions. It'll try the following in order of preference.
+
+1. ICE over UDP: ideal connection type, used in majority of conditions
+2. TURN with UDP (443): used when firewall blocks all other UDP port other than 443
+3. ICE over TCP: used when network disallows UDP (i.e. over VPN or corporate firewalls)
+4. TURN with TLS: used when firewall only allows outbound TLS connections
+
+## Network changes and reconnection
+
+With WiFi and cellular networks, users may sometimes run into network changes that cause the connection to the server to be interrupted. This could include switching from WiFi to cellular or going through spots with poor connection.
+
+When this happens, dTelecom will attempt to re-establish the connection behind the scenes. It'll fire off an `Reconnecting` event so your client could display additional UI to inform the user. If the reconnection is successful, you will receive a `Reconnected` callback to let you know that things are back to normal. Otherwise, it'll disconnect you from the room.
+
+During the reconnection, the video/audio tracks may stop sending/receiving data for a few seconds. When the connection is re-established, the tracks will then "unfreeze".

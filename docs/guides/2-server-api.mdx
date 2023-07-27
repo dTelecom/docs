@@ -1,0 +1,54 @@
+---
+title: Server APIs
+---
+
+dTelecom has built-in APIs that lets you to manage rooms and moderate participants. These APIs are designed to be used by your backend.
+
+Room APIs are built on top of [Twirp](https://twitchtv.github.io/twirp/docs/intro.html), and differ from a traditional REST interface. Arguments are passed via POSTing JSON body to the endpoints.
+
+Room APIs are fully distributed across multiple nodes. Each instance is capable of fulfilling requests about any room or participant.
+
+### Authorization header
+
+All of the APIs require a signed access token. The token should be set in HTTP headers as
+
+```
+Authorization: Bearer <token>
+```
+
+### Post body
+
+Twirp expects each request to be a HTTP POST. The body of the request should be
+a JSON object (`application/json`) containing parameters specific to each request. For requests
+that takes no parameters, an empty `{}` body should be used.
+
+## APIs
+
+### DeleteRoom
+
+Deletes an existing room by name or id. Requires `roomCreate` permission.
+DeleteRoom will disconnect all participants that are currently in the room.
+
+| Parameter | Type   | Description      |
+| :-------- | :----- | :--------------- |
+| room      | string | name of the room |
+
+### RemoveParticipant
+
+Removes a participant from room. Requires `roomAdmin`
+
+| Parameter | Type   | Description                 |
+| :-------- | :----- | :-------------------------- |
+| room      | string | name of the room            |
+| identity  | string | identity of the participant |
+
+### MutePublishedTrack
+
+Mute/unmute a participant's track. Requires `roomAdmin`
+
+| Parameter | Type   | Description                          |
+| :-------- | :----- | :----------------------------------- |
+| room      | string | name of the room                     |
+| identity  | string |                                      |
+| track_sid | string | sid of the track to mute             |
+| muted     | bool   | set to true to mute, false to unmute |

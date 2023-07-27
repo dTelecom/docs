@@ -1,0 +1,100 @@
+---
+title: Publishing media
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Camera and microphone
+
+It's simple to publish the local participant's camera and/or microphone streams to the room.
+We provide a consistent way to do this across platforms:
+
+```typescript
+// Turns camera track on
+room.localParticipant.setCameraEnabled(true)
+
+// Turns microphone track on
+room.localParticipant.setMicrophoneEnabled(true)
+```
+
+and to mute them, you can perform:
+
+```typescript
+room.localParticipant.setCameraEnabled(false)
+room.localParticipant.setMicrophoneEnabled(false)
+```
+
+Disabling camera or microphone will turn off their respective recording indicators. Other participants will receive a `TrackMuted` event.
+
+## Screen sharing
+
+dTelecom also supports screen share natively on supported platforms.
+
+<Tabs
+  defaultValue="typescript"
+  groupId="client-sdk"
+  values={[
+    {label: 'Browser', value: 'typescript'},
+  ]}>
+
+  <TabItem value="typescript">
+
+```typescript title="TypeScript"
+// this will trigger browser prompt to share screen
+await currentRoom.localParticipant.setScreenShareEnabled(true);
+```
+
+  </TabItem>
+</Tabs>
+
+## Advanced track management
+
+`setCameraEnabled`, `setMicrophoneEnabled`, and `setScreenShareEnabled` are convenience wrappers around our Track APIs, you could create tracks manually and publish or unpublish them at any time.
+
+<Tabs
+  defaultValue="typescript"
+  groupId="client-sdk"
+  values={[
+    {label: 'Browser', value: 'typescript'},
+  ]}>
+
+  <TabItem value="typescript">
+
+  ```typescript title="TypeScript"
+  async function publishTracks() {
+    const videoTrack = await createLocalVideoTrack({
+      facingMode: { ideal: "user" },
+      // preset resolutions
+      resolution: VideoPresets.hd
+    })
+    const audioTrack = await createLocalAudioTrack({
+      echoCancellation: true,
+      noiseSuppression: {
+        ideal: true,
+      }
+    })
+
+    const videoPublication = await room.localParticipant.publishTrack(videoTrack)
+    const audioPublication = await room.localParticipant.publishTrack(audioTrack)
+  }
+  ```
+
+  Tracks need to be published one at a time. It's important to `await` the first publishTrack call before attempting to publish again.
+
+  </TabItem>
+
+</Tabs>
+
+## Mute and unmute
+
+You can mute any track to stop it from sending data to the server. When a track is muted, dTelecom will trigger a `TrackMuted` event on all participants in the room. You can use this event to update your app's UI and reflect the correct state to all users in the room.
+
+Mute/unmute a track using its corresponding `LocalTrackPublication` object.
+
+## Video simulcasting
+
+With simulcasting, a client publishes multiple versions of the same video track with varying bitrate profiles. This allows dTelecom to dynamically forward the stream that's most appropriate given each receiving participant's available bandwidth and desired resolution.
+
+Adaptive layer selection takes place automatically in the SFU when the server detects a participant is bandwidth constrainted. When the participant's bandwidth improves, the server will then upgrade subscribed streams to higher resolutions.
+
+Simulcast is supported in all of dTelecom's client SDKs. You can enable it in the default publish settings or when publishing video tracks.
