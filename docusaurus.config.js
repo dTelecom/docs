@@ -1,7 +1,7 @@
 const repoUrl = 'https://github.com/dTelecom'
 
 module.exports = {
-  title: 'docs',
+  title: 'Docs',
   tagline: 'dTelecom Documentation',
   url: 'https://docs.dtelecom.org/',
   baseUrl: '/',
@@ -12,14 +12,14 @@ module.exports = {
   projectName: 'docs',
   themeConfig: {
     navbar: {
-      title: 'docs',
+      title: 'Docs',
       logo: {
         alt: 'dTelecom Logo',
         src: 'img/favicon.png',
       },
       items: [
         {
-          href: 'https://dtelecom.org',
+          href: 'https://video.dtelecom.org',
           label: 'Home',
           position: 'right',
         },
