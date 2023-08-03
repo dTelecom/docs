@@ -28,7 +28,7 @@ module.exports = {
     {
       type: 'category',
       label: 'API Reference',
-      collapsed: false,
+      collapsed: true,
       items: [
        'references/client-sdks',
        'references/server-sdks',

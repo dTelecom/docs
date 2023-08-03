@@ -8,5 +8,5 @@ Client SDKs are used to add audio/video functionality to your apps. dTelecom pro
 
 | Platform            | Repo                                                         | Links                                                        |
 | :------------------ | :----------------------------------------------------------- | :----------------------------------------------------------- |
-| Web (JS/TS)         | [client-sdk-js](https://github.com/dTelecom/client-sdk-js)    | [npm](https://www.npmjs.com/package/@dtelecom/client-sdk-js) |
+| Web (JS/TS)         | [client-sdk-js](https://github.com/dTelecom/client-sdk-js)    | [npm](https://www.npmjs.com/package/@dtelecom/livekit-client) |
 | React               | [components-react](https://github.com/dTelecom/components-js)    | [npm](https://www.npmjs.com/package/@dtelecom/components-react)           |
