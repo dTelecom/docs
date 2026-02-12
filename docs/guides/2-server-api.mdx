@@ -1,12 +1,26 @@
 ---
 title: Server APIs
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 dTelecom has built-in APIs that lets you to manage rooms and moderate participants. These APIs are designed to be used by your backend.
 
 Room APIs are built on top of [Twirp](https://twitchtv.github.io/twirp/docs/intro.html), and differ from a traditional REST interface. Arguments are passed via POSTing JSON body to the endpoints.
 
 Room APIs are fully distributed across multiple nodes. Each instance is capable of fulfilling requests about any room or participant.
+
+## Using the Server SDK
+
+The easiest way to interact with Room APIs is through the `RoomServiceClient` in the server SDK:
+
+```typescript
+import { RoomServiceClient } from '@dtelecom/server-sdk-js';
+
+const client = new RoomServiceClient('https://your-dtelecom-host', 'api-key', 'api-secret');
+```
+
+Note: For most operations, you'll use the SDK methods shown below rather than calling the HTTP endpoints directly.
 
 ### Authorization header
 
@@ -16,6 +30,8 @@ All of the APIs require a signed access token. The token should be set in HTTP h
 Authorization: Bearer <token>
 ```
 
+The server SDK handles this automatically when you use `RoomServiceClient`.
+
 ### Post body
 
 Twirp expects each request to be a HTTP POST. The body of the request should be
@@ -23,6 +39,43 @@ a JSON object (`application/json`) containing parameters specific to each reques
 that takes no parameters, an empty `{}` body should be used.
 
 ## APIs
+
+### CreateRoom
+
+Creates a new room. Requires `roomCreate` permission on the access token.
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| name | string | unique name of the room |
+| emptyTimeout | number | seconds to keep the room open after the last participant leaves (default: 300) |
+| maxParticipants | number | maximum number of participants allowed (0 = unlimited) |
+| metadata | string | arbitrary room metadata |
+
+```typescript
+const room = await client.createRoom({
+  name: 'my-room',
+  emptyTimeout: 600,
+  maxParticipants: 20,
+  metadata: JSON.stringify({ topic: 'Team standup' }),
+});
+console.log('Created room:', room.name, room.sid);
+```
+
+### ListRooms
+
+Lists active rooms. Optionally filter by room name(s). Requires `roomCreate` permission.
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| names | string[] | optional list of room names to filter by |
+
+```typescript
+// List all rooms
+const rooms = await client.listRooms();
+
+// List specific rooms
+const rooms = await client.listRooms(['room-1', 'room-2']);
+```
 
 ### DeleteRoom
 
@@ -33,6 +86,39 @@ DeleteRoom will disconnect all participants that are currently in the room.
 | :-------- | :----- | :--------------- |
 | room      | string | name of the room |
 
+```typescript
+await client.deleteRoom('my-room');
+```
+
+### ListParticipants
+
+Lists participants in a room. Requires `roomAdmin` permission.
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| room | string | name of the room |
+
+```typescript
+const participants = await client.listParticipants('my-room');
+for (const p of participants) {
+  console.log(p.identity, p.name, p.state);
+}
+```
+
+### GetParticipant
+
+Gets information about a specific participant. Requires `roomAdmin` permission.
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| room | string | name of the room |
+| identity | string | identity of the participant |
+
+```typescript
+const participant = await client.getParticipant('my-room', 'user-1');
+console.log(participant.name, participant.metadata);
+```
+
 ### RemoveParticipant
 
 Removes a participant from room. Requires `roomAdmin`
@@ -41,6 +127,42 @@ Removes a participant from room. Requires `roomAdmin`
 | :-------- | :----- | :-------------------------- |
 | room      | string | name of the room            |
 | identity  | string | identity of the participant |
+
+```typescript
+await client.removeParticipant('my-room', 'user-1');
+```
+
+### UpdateParticipant
+
+Updates a participant's metadata, permissions, or display name. Requires `roomAdmin`.
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| room | string | name of the room |
+| identity | string | identity of the participant |
+| metadata | string | new metadata (optional) |
+| permissions | object | updated permissions (optional) |
+| name | string | new display name (optional) |
+
+```typescript
+await client.updateParticipant('my-room', 'user-1', {
+  metadata: JSON.stringify({ role: 'presenter' }),
+  name: 'New Display Name',
+});
+```
+
+### UpdateRoomMetadata
+
+Updates a room's metadata. Requires `roomAdmin`.
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| room | string | name of the room |
+| metadata | string | new room metadata |
+
+```typescript
+await client.updateRoomMetadata('my-room', JSON.stringify({ recording: true }));
+```
 
 ### MutePublishedTrack
 
@@ -52,3 +174,48 @@ Mute/unmute a participant's track. Requires `roomAdmin`
 | identity  | string |                                      |
 | track_sid | string | sid of the track to mute             |
 | muted     | bool   | set to true to mute, false to unmute |
+
+```typescript
+await client.mutePublishedTrack('my-room', 'user-1', 'TR_xxxxx', true);
+```
+
+### UpdateSubscriptions
+
+Updates a participant's track subscriptions. Requires `roomAdmin`.
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| room | string | name of the room |
+| identity | string | identity of the participant |
+| track_sids | string[] | track SIDs to subscribe/unsubscribe |
+| subscribe | bool | true to subscribe, false to unsubscribe |
+
+```typescript
+await client.updateSubscriptions('my-room', 'user-1', ['TR_xxxxx'], true);
+```
+
+### SendData
+
+Sends data to participants in a room. Requires `roomAdmin`.
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| room | string | name of the room |
+| data | Uint8Array | payload to send |
+| kind | number | 0 = RELIABLE, 1 = LOSSY |
+| destination_sids | string[] | optional: specific participant SIDs (empty = broadcast) |
+| topic | string | optional: topic label for the message |
+
+```typescript
+const encoder = new TextEncoder();
+const data = encoder.encode(JSON.stringify({ message: 'Hello everyone!' }));
+
+// Broadcast to all participants
+await client.sendData('my-room', data, 0);
+
+// Send to specific participants
+await client.sendData('my-room', data, 0, {
+  destinationSids: ['PA_xxxxx'],
+  topic: 'chat',
+});
+```

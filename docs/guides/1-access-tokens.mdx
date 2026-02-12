@@ -8,6 +8,8 @@ For a dTelecom client to successfully connect to the server, it must pass an acc
 
 This token encodes the identity of a participant, name of the room, capabilities and permissions. Access tokens are JWT-based and signed with your API secret to prevent forgery.
 
+**dTelecom uses Ed25519 signing** (not HMAC-SHA256 like standard LiveKit). Your API Key is a Solana Ed25519 public key, and your API Secret is the corresponding private key. You get these from [cloud.dtelecom.org](https://cloud.dtelecom.org) when you create a project.
+
 Since participant identity is unique within the room, each access token can be used only by a single participant.
 
 ## Creating a token
@@ -34,7 +36,14 @@ const at = new AccessToken('api-key', 'secret-key', {
 at.addGrant({ roomJoin: true, room: roomName, canPublish: true, canSubscribe: true });
 
 const token = at.toJwt();
+
+// Get the WebSocket URL for the best SFU node based on client IP
+const clientIp = '203.0.113.1'; // get from request headers (e.g. x-forwarded-for)
+const wsUrl = await at.getWsUrl(clientIp);
+
 console.log('access token', token);
+console.log('websocket url', wsUrl);
+// Return both token and wsUrl to the client
 ```
 
   </TabItem>
@@ -77,6 +86,6 @@ A tokens has an expiration time. We recommend setting it to the expected duratio
 
 ## Participant metadata
 
-You may also attach any arbirary metadata onto each participant via the `metadata` field. This data is opaque to dTelecom.
+You may also attach any arbitrary metadata onto each participant via the `metadata` field. This data is opaque to dTelecom.
 
 When provided, dTelecom will attach the metadata to the participant object that the clients would receive.

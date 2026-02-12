@@ -28,25 +28,22 @@ Subscribed callback will be fired on both `Room` and `RemoteParticipant` objects
 
   ```typescript title="TypeScript"
   import {
-    connect,
+    Room,
     RoomEvent,
-  } from '@dTelecom/client-sdk-js';
+    RemoteTrack,
+    RemoteTrackPublication,
+    RemoteParticipant,
+  } from '@dtelecom/livekit-client';
 
-  connect('ws://your_host', token, {
-    audio: true,
-    video: true,
-  }).then((room) => {
-    room
-      .on(RoomEvent.TrackSubscribed, handleTrackSubscribed)
-  });
+  const room = new Room();
+  await room.connect(wsUrl, token);
 
-  function handleTrackSubscribed(
-    track: RemoteTrack,
-    publication: RemoteTrackPublication,
-    participant: RemoteParticipant
-  ) {
-    /* do things with track, publication or participant */
-  }
+  room.on(
+    RoomEvent.TrackSubscribed,
+    (track: RemoteTrack, publication: RemoteTrackPublication, participant: RemoteParticipant) => {
+      /* do things with track, publication or participant */
+    }
+  );
   ```
 
   </TabItem>
@@ -79,6 +76,8 @@ Once subscribed to an audio or video track, a client usually wants to start play
   <TabItem value="typescript">
 
   ```typescript title="TypeScript"
+  import { RemoteTrack, RemoteTrackPublication, RemoteParticipant } from '@dtelecom/livekit-client';
+
   function handleTrackSubscribed(
     track: RemoteTrack,
     publication: RemoteTrackPublication,
@@ -111,7 +110,7 @@ export const MyComponent = ({audioTrack, videoTrack}) => {
 
 ## Speaker detection
 
-When audio tracks are published, dTelecom will detect participants whome are speaking. Speaker updates are sent for both local and remote participants. They will fire on both, Room and Participant objects.
+When audio tracks are published, dTelecom will detect participants who are speaking. Speaker updates are sent for both local and remote participants. They will fire on both, Room and Participant objects.
 
 ## Subscriber controls
 
@@ -130,13 +129,16 @@ Client APIs are available to setup a connection for selective subscription and o
   <TabItem value="typescript">
 
   ```typescript title="TypeScript"
-  let room = await room.connect(url, token, {
+  import { Room, RoomEvent } from '@dtelecom/livekit-client';
+
+  const room = new Room();
+  await room.connect(wsUrl, token, {
     autoSubscribe: false,
-  })
+  });
 
   room.on(RoomEvent.TrackPublished, (track, publication, participant) => {
-    publication.setSubscribed(true)
-  })
+    publication.setSubscribed(true);
+  });
   ```
 
   </TabItem>
@@ -159,27 +161,26 @@ If a video track has simulcast enabled, a receiving client may want to manually 
 
   ```typescript title="TypeScript"
   import {
-    connect,
+    Room,
     RoomEvent,
-  } from '@dTelecom/client-sdk-js';
+    RemoteTrack,
+    RemoteTrackPublication,
+    RemoteParticipant,
+    Track,
+    VideoQuality,
+  } from '@dtelecom/livekit-client';
 
-  connect('ws://your_host', token, {
-    audio: true,
-    video: true,
-  }).then((room) => {
-    room
-      .on(RoomEvent.TrackSubscribed, handleTrackSubscribed)
-  });
+  const room = new Room();
+  await room.connect(wsUrl, token);
 
-  function handleTrackSubscribed(
-    track: RemoteTrack,
-    publication: RemoteTrackPublication,
-    participant: RemoteParticipant
-  ) {
-    if (track.kind === Track.Kind.Video) {
-      publication.setVideoQuality(VideoQuality.LOW)
+  room.on(
+    RoomEvent.TrackSubscribed,
+    (track: RemoteTrack, publication: RemoteTrackPublication, participant: RemoteParticipant) => {
+      if (track.kind === Track.Kind.Video) {
+        publication.setVideoQuality(VideoQuality.LOW);
+      }
     }
-  }
+  );
   ```
 
   </TabItem>

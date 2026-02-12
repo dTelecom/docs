@@ -1,0 +1,67 @@
+---
+title: Architecture
+slug: /guides/architecture
+---
+
+dTelecom is a fork of [LiveKit](https://livekit.io) with a key difference: instead of connecting to a single centralized server, clients connect to a **decentralized network of SFU nodes** discovered via the Solana blockchain.
+
+This page explains how the system works and what it means for your code.
+
+## How it differs from LiveKit
+
+| Aspect | LiveKit | dTelecom |
+|:-------|:--------|:---------|
+| Server URL | Fixed URL you configure (e.g. `wss://my-livekit.example.com`) | Dynamic — returned by `getWsUrl()` from Solana registry |
+| JWT signing | HMAC-SHA256 | Ed25519 (Solana keypair) |
+| Node discovery | N/A (single server or self-hosted cluster) | Solana blockchain registry |
+| API keys | Arbitrary strings | Solana Ed25519 keypair (public key = API key, private key = API secret) |
+| Client SDKs | `livekit-client` | `@dtelecom/livekit-client` (API-compatible fork) |
+| Server SDKs | `livekit-server-sdk` | `@dtelecom/server-sdk-js` (adds `getWsUrl()`) |
+
+## The connection flow
+
+Here is the sequence when a user joins a video call:
+
+```
+1. Client → Your Server:    "I want to join room X"
+2. Your Server:              Create AccessToken with Ed25519 signing
+3. Your Server:              Call token.getWsUrl(clientIp)
+4. getWsUrl() → Solana:     Query the node registry on-chain
+5. Solana → Your Server:    Return the best SFU node URL for this client's IP
+6. Your Server → Client:    Return { token, wsUrl }
+7. Client → SFU Node:       Connect via WebSocket using token + wsUrl
+8. SFU Node:                Verify Ed25519 JWT, join client to room
+```
+
+The critical step is **#3–5**: `getWsUrl()` reads from a Solana smart contract that maintains a registry of active SFU nodes. It selects the node with the lowest expected latency based on the client's IP geolocation.
+
+## Environment variables
+
+Your server needs these environment variables:
+
+| Variable | Value | Purpose |
+|:---------|:------|:--------|
+| `API_KEY` | From [cloud.dtelecom.org](https://cloud.dtelecom.org) | Ed25519 public key, used as JWT issuer |
+| `API_SECRET` | From [cloud.dtelecom.org](https://cloud.dtelecom.org) | Ed25519 private key, used to sign JWTs |
+| `SOLANA_CONTRACT_ADDRESS` | `E2FcHsC9STeB6FEtxBKGAwMTX7cbfYMyjSHKs4QbBAmh` | Address of the node registry smart contract |
+| `SOLANA_NETWORK_HOST_HTTP` | `https://api.mainnet-beta.solana.com` | Solana RPC endpoint |
+| `SOLANA_REGISTRY_AUTHORITY` | `6KVRs6Yr2oYzddepFdtWrFmVq8sgELcXzbUy7apwuQX4` | Authority key for the registry |
+
+The `API_KEY` and `API_SECRET` are project-specific (from the cloud dashboard). The three `SOLANA_*` values are mainnet constants shared across all projects.
+
+## Why LiveKit component names are kept
+
+You'll notice that client components are still named `LiveKitRoom`, and the client package is `@dtelecom/livekit-client`. This is intentional — it maintains API compatibility with the LiveKit ecosystem, making it easy to migrate existing LiveKit apps to dTelecom's decentralized network. The only code changes needed are:
+
+1. Swap npm packages (`livekit-client` → `@dtelecom/livekit-client`)
+2. Replace the hardcoded server URL with the dynamic `wsUrl` from `getWsUrl()`
+3. Use Ed25519 keys from the dTelecom cloud dashboard
+
+## SDK packages
+
+| Package | Install | Purpose |
+|:--------|:--------|:--------|
+| `@dtelecom/server-sdk-js` | `npm i @dtelecom/server-sdk-js` | Server-side: tokens, `getWsUrl()`, room management |
+| `@dtelecom/livekit-client` | `npm i @dtelecom/livekit-client` | Client-side: Room, Track, RoomEvent (vanilla JS/TS) |
+| `@dtelecom/components-react` | `npm i @dtelecom/components-react` | React UI components: LiveKitRoom, VideoConference |
+| `@dtelecom/components-styles` | `npm i @dtelecom/components-styles` | Default styles for React components |

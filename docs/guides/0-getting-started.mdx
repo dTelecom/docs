@@ -1,0 +1,170 @@
+---
+title: Getting Started
+slug: /guides/getting-started
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+This guide walks you through building a working video call with dTelecom in under 10 minutes.
+
+## 1. Get your API keys
+
+Sign up at [cloud.dtelecom.org](https://cloud.dtelecom.org), create a project, and copy your **API Key** and **API Secret**.
+
+These keys are Solana Ed25519 keypairs: the API Key is the public key, and the API Secret is the private key. dTelecom uses these to sign JWTs and discover decentralized SFU nodes on the Solana blockchain.
+
+## 2. Set up environment variables
+
+Create a `.env.local` file in your project root:
+
+```bash
+API_KEY=<your-api-key-from-cloud>
+API_SECRET=<your-api-secret-from-cloud>
+SOLANA_CONTRACT_ADDRESS=E2FcHsC9STeB6FEtxBKGAwMTX7cbfYMyjSHKs4QbBAmh
+SOLANA_NETWORK_HOST_HTTP=https://api.mainnet-beta.solana.com
+SOLANA_REGISTRY_AUTHORITY=6KVRs6Yr2oYzddepFdtWrFmVq8sgELcXzbUy7apwuQX4
+```
+
+The Solana values above are for **mainnet** and do not change between projects.
+
+## 3. Install SDKs
+
+```bash
+npm install @dtelecom/server-sdk-js @dtelecom/livekit-client @dtelecom/components-react @dtelecom/components-styles
+```
+
+| Package | Purpose |
+|:--------|:--------|
+| `@dtelecom/server-sdk-js` | Server-side: create tokens, get WebSocket URL, manage rooms |
+| `@dtelecom/livekit-client` | Client-side: connect to rooms, manage tracks (vanilla JS/TS) |
+| `@dtelecom/components-react` | React components (`LiveKitRoom`, `VideoConference`, etc.) |
+| `@dtelecom/components-styles` | Default CSS styles for the React components |
+
+## 4. Server-side: create a token and get the WebSocket URL
+
+Unlike centralized services, dTelecom does not give you a fixed server URL. Instead, your server calls `token.getWsUrl(clientIp)` which queries the Solana blockchain to find the optimal SFU node for the connecting client.
+
+<Tabs
+  defaultValue="node"
+  groupId="server-sdk"
+  values={[
+    {label: 'Node', value: 'node'},
+  ]}>
+  <TabItem value="node">
+
+```typescript title="app/api/token/route.ts (Next.js App Router)"
+import { AccessToken } from '@dtelecom/server-sdk-js';
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(req: NextRequest) {
+  const roomName = req.nextUrl.searchParams.get('room') || 'my-room';
+  const identity = req.nextUrl.searchParams.get('identity') || 'user-' + Math.random().toString(36).slice(2);
+
+  const at = new AccessToken(
+    process.env.API_KEY!,
+    process.env.API_SECRET!,
+    { identity }
+  );
+  at.addGrant({ roomJoin: true, room: roomName, canPublish: true, canSubscribe: true });
+
+  const token = at.toJwt();
+
+  // Get the client's IP for optimal node selection
+  const clientIp = (req.headers.get('x-forwarded-for') ?? '127.0.0.1').split(',')[0].trim();
+
+  // Query Solana blockchain to find the best SFU node
+  const wsUrl = await at.getWsUrl(clientIp);
+
+  return NextResponse.json({ token, wsUrl });
+}
+```
+
+  </TabItem>
+</Tabs>
+
+**Key points:**
+- `at.toJwt()` signs the token using Ed25519 (not HMAC like standard LiveKit)
+- `at.getWsUrl(clientIp)` queries the Solana node registry and returns a WebSocket URL like `wss://node-xyz.dtelecom.org`
+- The client IP is used to select the geographically closest SFU node for lowest latency
+
+## 5. Client-side: connect and render video
+
+<Tabs
+  defaultValue="react"
+  groupId="client-sdk"
+  values={[
+    {label: 'React', value: 'react'},
+    {label: 'Browser', value: 'typescript'},
+  ]}>
+  <TabItem value="react">
+
+```tsx title="app/room/page.tsx"
+'use client';
+import { LiveKitRoom, VideoConference } from '@dtelecom/components-react';
+import '@dtelecom/components-styles';
+import { useEffect, useState } from 'react';
+
+export default function RoomPage() {
+  const [token, setToken] = useState('');
+  const [wsUrl, setWsUrl] = useState('');
+
+  useEffect(() => {
+    fetch('/api/token?room=my-room&identity=user-1')
+      .then((res) => res.json())
+      .then((data) => {
+        setToken(data.token);
+        setWsUrl(data.wsUrl);
+      });
+  }, []);
+
+  if (!token || !wsUrl) return <div>Connecting...</div>;
+
+  return (
+    <LiveKitRoom token={token} serverUrl={wsUrl} connect={true}>
+      <VideoConference />
+    </LiveKitRoom>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="typescript">
+
+```typescript title="Vanilla TypeScript"
+import { Room, RoomEvent } from '@dtelecom/livekit-client';
+
+async function joinRoom() {
+  // Fetch token and WebSocket URL from your server
+  const resp = await fetch('/api/token?room=my-room&identity=user-1');
+  const { token, wsUrl } = await resp.json();
+
+  const room = new Room();
+
+  room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+    const element = track.attach();
+    document.getElementById('video-container')!.appendChild(element);
+  });
+
+  room.on(RoomEvent.Disconnected, () => {
+    console.log('Disconnected from room');
+  });
+
+  await room.connect(wsUrl, token);
+
+  // Publish camera and microphone
+  await room.localParticipant.setCameraEnabled(true);
+  await room.localParticipant.setMicrophoneEnabled(true);
+}
+
+joinRoom();
+```
+
+  </TabItem>
+</Tabs>
+
+## What's next?
+
+- [Architecture](/guides/architecture) — understand how dTelecom's decentralized node network works
+- [Access Tokens](/guides/access-tokens) — customize permissions and metadata
+- [Server APIs](/guides/server-api) — manage rooms and participants from your backend
+- [Conference App](/guides/conference-app) — build a full Google Meet-style app

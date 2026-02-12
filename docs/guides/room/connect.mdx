@@ -14,11 +14,114 @@ For events happening to a specific participant, they will also be fired on the a
 
 Connecting to a room requires two parameters: a `url` and a `token`.
 
-The `token` is an access token representing the particular local participant. 
+The `url` is a WebSocket URL returned by `token.getWsUrl(clientIp)` on your server. Unlike centralized services, dTelecom does not use a fixed server URL — the URL is dynamically resolved from the Solana node registry based on the client's IP for optimal latency. See [Architecture](/guides/architecture) for details.
+
+The `token` is an access token representing the particular local participant, signed with your Ed25519 API secret. See [Access Tokens](/guides/access-tokens).
+
+<Tabs
+  defaultValue="react"
+  groupId="client-sdk"
+  values={[
+    {label: 'React', value: 'react'},
+    {label: 'Browser', value: 'typescript'},
+  ]}>
+  <TabItem value="react">
+
+```tsx title="React"
+import { LiveKitRoom, VideoConference } from '@dtelecom/components-react';
+import '@dtelecom/components-styles';
+
+// token and wsUrl are fetched from your server (see Getting Started guide)
+function MyApp({ token, wsUrl }: { token: string; wsUrl: string }) {
+  return (
+    <LiveKitRoom
+      token={token}
+      serverUrl={wsUrl}
+      connect={true}
+      onConnected={() => console.log('Connected!')}
+      onDisconnected={() => console.log('Disconnected')}
+    >
+      <VideoConference />
+    </LiveKitRoom>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="typescript">
+
+```typescript title="Vanilla TypeScript"
+import { Room, RoomEvent } from '@dtelecom/livekit-client';
+
+// token and wsUrl are fetched from your server (see Getting Started guide)
+async function connectToRoom(wsUrl: string, token: string) {
+  const room = new Room();
+
+  room.on(RoomEvent.Connected, () => {
+    console.log('Connected to room', room.name);
+  });
+
+  room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+    const element = track.attach();
+    document.getElementById('video-container')!.appendChild(element);
+  });
+
+  await room.connect(wsUrl, token);
+
+  // Enable camera and microphone
+  await room.localParticipant.setCameraEnabled(true);
+  await room.localParticipant.setMicrophoneEnabled(true);
+
+  return room;
+}
+```
+
+  </TabItem>
+</Tabs>
 
 ## Leaving a room
 
 When your client is leaving a room, you should notify dTelecom of leave events by calling `Room.disconnect()`. If the application is closed without notifying the dTelecom, it will continue to display the participant as being in the room for more than 20 seconds.
+
+<Tabs
+  defaultValue="react"
+  groupId="client-sdk"
+  values={[
+    {label: 'React', value: 'react'},
+    {label: 'Browser', value: 'typescript'},
+  ]}>
+  <TabItem value="react">
+
+```tsx title="React"
+// LiveKitRoom handles disconnection automatically when unmounted.
+// You can also use the onDisconnected callback:
+<LiveKitRoom
+  token={token}
+  serverUrl={wsUrl}
+  connect={true}
+  onDisconnected={() => {
+    // Navigate back to lobby, clean up state, etc.
+  }}
+>
+  <VideoConference />
+</LiveKitRoom>
+```
+
+  </TabItem>
+  <TabItem value="typescript">
+
+```typescript title="Vanilla TypeScript"
+// Disconnect from the room
+room.disconnect();
+
+// You can also listen for the disconnected event
+room.on(RoomEvent.Disconnected, (reason) => {
+  console.log('Disconnected:', reason);
+});
+```
+
+  </TabItem>
+</Tabs>
 
 ## Connectivity
 
@@ -33,6 +136,49 @@ dTelecom configures WebRTC to enable connectivity from a wide variety of network
 
 With WiFi and cellular networks, users may sometimes run into network changes that cause the connection to the server to be interrupted. This could include switching from WiFi to cellular or going through spots with poor connection.
 
-When this happens, dTelecom will attempt to re-establish the connection behind the scenes. It'll fire off an `Reconnecting` event so your client could display additional UI to inform the user. If the reconnection is successful, you will receive a `Reconnected` callback to let you know that things are back to normal. Otherwise, it'll disconnect you from the room.
+When this happens, dTelecom will attempt to re-establish the connection behind the scenes. It'll fire off a `Reconnecting` event so your client could display additional UI to inform the user. If the reconnection is successful, you will receive a `Reconnected` callback to let you know that things are back to normal. Otherwise, it'll disconnect you from the room.
+
+<Tabs
+  defaultValue="react"
+  groupId="client-sdk"
+  values={[
+    {label: 'React', value: 'react'},
+    {label: 'Browser', value: 'typescript'},
+  ]}>
+  <TabItem value="react">
+
+```tsx title="React"
+import { useConnectionState } from '@dtelecom/components-react';
+import { ConnectionState } from '@dtelecom/livekit-client';
+
+function ConnectionIndicator() {
+  const connectionState = useConnectionState();
+
+  if (connectionState === ConnectionState.Reconnecting) {
+    return <div>Reconnecting...</div>;
+  }
+  return null;
+}
+```
+
+  </TabItem>
+  <TabItem value="typescript">
+
+```typescript title="Vanilla TypeScript"
+room.on(RoomEvent.Reconnecting, () => {
+  console.log('Reconnecting to room...');
+});
+
+room.on(RoomEvent.Reconnected, () => {
+  console.log('Reconnected!');
+});
+
+room.on(RoomEvent.Disconnected, () => {
+  console.log('Disconnected from room');
+});
+```
+
+  </TabItem>
+</Tabs>
 
 During the reconnection, the video/audio tracks may stop sending/receiving data for a few seconds. When the connection is re-established, the tracks will then "unfreeze".

@@ -9,6 +9,8 @@ module.exports = {
       label: 'Guides',
       collapsed: true,
       items: [
+        'guides/getting-started',
+        'guides/0a-architecture',
         'guides/access-tokens',
         'guides/server-api',
         'guides/webhooks',
@@ -23,6 +25,7 @@ module.exports = {
             'guides/room/data',
           ],
         },
+        'guides/conference-app',
       ],
     },
     {

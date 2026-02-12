@@ -1,0 +1,404 @@
+# dTelecom — Complete Documentation for LLMs
+
+> dTelecom is a decentralized WebRTC video conferencing platform built on Solana. It is an API-compatible fork of LiveKit with decentralized SFU node discovery via Solana blockchain and Ed25519 JWT signing. Use it to build real-time audio/video applications with JavaScript/TypeScript.
+
+## Key Differences from LiveKit
+
+| Aspect | LiveKit | dTelecom |
+|--------|---------|----------|
+| Server URL | Fixed (e.g. `wss://my-livekit.example.com`) | Dynamic — from `getWsUrl()` via Solana registry |
+| JWT signing | HMAC-SHA256 | Ed25519 (Solana keypair) |
+| API keys | Arbitrary strings | Solana Ed25519 keypair (public=API key, private=API secret) |
+| Node discovery | N/A | Solana blockchain registry |
+| Client SDK | `livekit-client` | `@dtelecom/livekit-client` (API-compatible) |
+| Server SDK | `livekit-server-sdk` | `@dtelecom/server-sdk-js` (adds `getWsUrl()`) |
+| React components | `@livekit/components-react` | `@dtelecom/components-react` (same API) |
+
+Component names like `LiveKitRoom` are kept intentionally for easy migration.
+
+---
+
+## NPM Packages
+
+```bash
+# Server-side
+npm install @dtelecom/server-sdk-js
+
+# Client-side
+npm install @dtelecom/livekit-client @dtelecom/components-react @dtelecom/components-styles
+```
+
+| Package | Purpose |
+|---------|---------|
+| `@dtelecom/server-sdk-js` | Server: AccessToken, getWsUrl(), RoomServiceClient, WebhookReceiver, EgressClient, IngressClient |
+| `@dtelecom/livekit-client` | Client: Room, RoomEvent, Track, LocalParticipant, RemoteParticipant |
+| `@dtelecom/components-react` | React: LiveKitRoom, VideoConference, GridLayout, ParticipantTile, ControlBar, useTracks, useConnectionState |
+| `@dtelecom/components-styles` | Default CSS styles for React components |
+
+---
+
+## Environment Variables
+
+```bash
+API_KEY=<from-cloud.dtelecom.org>
+API_SECRET=<from-cloud.dtelecom.org>
+SOLANA_CONTRACT_ADDRESS=E2FcHsC9STeB6FEtxBKGAwMTX7cbfYMyjSHKs4QbBAmh
+SOLANA_NETWORK_HOST_HTTP=https://api.mainnet-beta.solana.com
+SOLANA_REGISTRY_AUTHORITY=6KVRs6Yr2oYzddepFdtWrFmVq8sgELcXzbUy7apwuQX4
+```
+
+- `API_KEY` / `API_SECRET`: Ed25519 keypair from cloud.dtelecom.org (project-specific)
+- The three `SOLANA_*` values are mainnet constants (same for all projects)
+- The server SDK reads these from `process.env` automatically
+
+---
+
+## Connection Flow
+
+```
+1. Client → Your Server:    "I want to join room X"
+2. Your Server:              Create AccessToken with Ed25519 signing
+3. Your Server:              Call token.getWsUrl(clientIp)
+4. getWsUrl() → Solana:     Query the node registry on-chain
+5. Solana → Your Server:    Return the best SFU node URL
+6. Your Server → Client:    Return { token, wsUrl }
+7. Client → SFU Node:       Connect via WebSocket
+```
+
+---
+
+## Server SDK API
+
+### AccessToken
+
+```typescript
+import { AccessToken } from '@dtelecom/server-sdk-js';
+
+const at = new AccessToken(process.env.API_KEY!, process.env.API_SECRET!, {
+  identity: 'user-1',       // unique participant identity
+  name: 'Display Name',     // optional display name
+  metadata: '{"role":"host"}', // optional metadata string
+});
+
+// Grant permissions
+at.addGrant({
+  roomJoin: true,        // can join the room
+  room: 'my-room',       // room name
+  canPublish: true,      // can publish audio/video
+  canSubscribe: true,    // can subscribe to others' tracks
+  roomCreate: true,      // can create rooms (for admin tokens)
+  roomAdmin: true,       // can moderate (for admin tokens)
+});
+
+// Get the JWT string
+const token = at.toJwt();
+
+// Get the WebSocket URL for the best SFU node
+// clientIp should be the connecting user's IP (from x-forwarded-for header)
+const wsUrl = await at.getWsUrl(clientIp);
+```
+
+### RoomServiceClient
+
+```typescript
+import { RoomServiceClient } from '@dtelecom/server-sdk-js';
+
+const client = new RoomServiceClient('https://your-host', apiKey, apiSecret);
+
+// Create a room
+const room = await client.createRoom({
+  name: 'my-room',
+  emptyTimeout: 600,       // seconds before empty room closes
+  maxParticipants: 20,
+  metadata: JSON.stringify({ topic: 'standup' }),
+});
+
+// List all rooms
+const rooms = await client.listRooms();
+
+// List specific rooms
+const rooms = await client.listRooms(['room-1', 'room-2']);
+
+// Delete a room (disconnects all participants)
+await client.deleteRoom('my-room');
+
+// List participants in a room
+const participants = await client.listParticipants('my-room');
+
+// Get a specific participant
+const p = await client.getParticipant('my-room', 'user-1');
+
+// Update participant metadata/name
+await client.updateParticipant('my-room', 'user-1', {
+  metadata: JSON.stringify({ role: 'presenter' }),
+  name: 'New Name',
+});
+
+// Remove participant from room
+await client.removeParticipant('my-room', 'user-1');
+
+// Update room metadata
+await client.updateRoomMetadata('my-room', JSON.stringify({ recording: true }));
+
+// Mute a track
+await client.mutePublishedTrack('my-room', 'user-1', 'TR_xxxxx', true);
+
+// Send data to participants
+const encoder = new TextEncoder();
+const data = encoder.encode(JSON.stringify({ message: 'hello' }));
+await client.sendData('my-room', data, 0); // 0=RELIABLE, 1=LOSSY
+await client.sendData('my-room', data, 0, { destinationSids: ['PA_xxx'], topic: 'chat' });
+```
+
+### WebhookReceiver
+
+```typescript
+import { WebhookReceiver } from '@dtelecom/server-sdk-js';
+
+const receiver = new WebhookReceiver(apiKey, apiSecret);
+
+// Express example (use express.raw() middleware for the webhook endpoint)
+app.post('/webhook', (req, res) => {
+  const event = receiver.receive(req.body, req.get('Authorization'));
+  // event.event: 'room_started' | 'room_finished' | 'participant_joined' | 'participant_left'
+  // event.room: Room object
+  // event.participant: Participant object (for participant events)
+});
+```
+
+---
+
+## Client SDK API
+
+### Room (vanilla JS/TS)
+
+```typescript
+import {
+  Room,
+  RoomEvent,
+  Track,
+  VideoPresets,
+  RemoteTrack,
+  RemoteTrackPublication,
+  RemoteParticipant,
+  DataPacket_Kind,
+  createLocalVideoTrack,
+  createLocalAudioTrack,
+} from '@dtelecom/livekit-client';
+
+// Create and connect
+const room = new Room();
+await room.connect(wsUrl, token);
+
+// Enable camera and mic
+await room.localParticipant.setCameraEnabled(true);
+await room.localParticipant.setMicrophoneEnabled(true);
+
+// Screen share
+await room.localParticipant.setScreenShareEnabled(true);
+
+// Advanced: create tracks manually
+const videoTrack = await createLocalVideoTrack({ resolution: VideoPresets.hd });
+const audioTrack = await createLocalAudioTrack({ echoCancellation: true, noiseSuppression: { ideal: true } });
+await room.localParticipant.publishTrack(videoTrack);
+await room.localParticipant.publishTrack(audioTrack);
+
+// Subscribe to tracks
+room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, pub: RemoteTrackPublication, participant: RemoteParticipant) => {
+  const element = track.attach(); // returns HTMLVideoElement or HTMLAudioElement
+  document.getElementById('container')!.appendChild(element);
+});
+
+// Reconnection events
+room.on(RoomEvent.Reconnecting, () => { /* show reconnecting UI */ });
+room.on(RoomEvent.Reconnected, () => { /* hide reconnecting UI */ });
+room.on(RoomEvent.Disconnected, (reason) => { /* handle disconnect */ });
+
+// Data messages
+const encoder = new TextEncoder();
+const data = encoder.encode(JSON.stringify({ message: 'hello' }));
+room.localParticipant.publishData(data, DataPacket_Kind.RELIABLE);
+
+room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant, kind) => {
+  const msg = new TextDecoder().decode(payload);
+});
+
+// Disconnect
+room.disconnect();
+```
+
+### React Components
+
+```tsx
+import { LiveKitRoom, VideoConference } from '@dtelecom/components-react';
+import '@dtelecom/components-styles';
+
+// Simple usage — full conference UI
+<LiveKitRoom token={token} serverUrl={wsUrl} connect={true} onDisconnected={handleLeave}>
+  <VideoConference />
+</LiveKitRoom>
+
+// Custom layout
+import { GridLayout, ParticipantTile, useTracks, RoomAudioRenderer, ControlBar, useConnectionState } from '@dtelecom/components-react';
+import { Track, ConnectionState } from '@dtelecom/livekit-client';
+
+function MyConference() {
+  const tracks = useTracks([
+    { source: Track.Source.Camera, withPlaceholder: true },
+    { source: Track.Source.ScreenShare, withPlaceholder: false },
+  ], { onlySubscribed: false });
+  const connectionState = useConnectionState();
+
+  return (
+    <div style={{ height: '100vh' }}>
+      {connectionState === ConnectionState.Reconnecting && <div>Reconnecting...</div>}
+      <GridLayout tracks={tracks}>
+        <ParticipantTile />
+      </GridLayout>
+      <RoomAudioRenderer />
+      <ControlBar />
+    </div>
+  );
+}
+```
+
+---
+
+## Complete Conference App (Next.js)
+
+A minimal Google Meet-style conference app. Two files, ~80 lines total.
+
+### Server: app/api/join/route.ts
+
+```typescript
+import { AccessToken } from '@dtelecom/server-sdk-js';
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(req: NextRequest) {
+  const { room, identity } = await req.json();
+
+  if (!room || !identity) {
+    return NextResponse.json({ error: 'room and identity are required' }, { status: 400 });
+  }
+
+  const at = new AccessToken(
+    process.env.API_KEY!,
+    process.env.API_SECRET!,
+    { identity, name: identity }
+  );
+  at.addGrant({
+    roomJoin: true,
+    room,
+    canPublish: true,
+    canSubscribe: true,
+  });
+
+  const token = at.toJwt();
+  const clientIp = (req.headers.get('x-forwarded-for') ?? '127.0.0.1').split(',')[0].trim();
+  const wsUrl = await at.getWsUrl(clientIp);
+
+  return NextResponse.json({ token, wsUrl });
+}
+```
+
+### Client: app/page.tsx
+
+```tsx
+'use client';
+import { LiveKitRoom, VideoConference } from '@dtelecom/components-react';
+import '@dtelecom/components-styles';
+import { useState } from 'react';
+
+export default function Home() {
+  const [room, setRoom] = useState('');
+  const [identity, setIdentity] = useState('');
+  const [token, setToken] = useState('');
+  const [wsUrl, setWsUrl] = useState('');
+
+  async function joinRoom() {
+    const res = await fetch('/api/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ room, identity }),
+    });
+    const data = await res.json();
+    setToken(data.token);
+    setWsUrl(data.wsUrl);
+  }
+
+  function leaveRoom() {
+    setToken('');
+    setWsUrl('');
+  }
+
+  if (!token || !wsUrl) {
+    return (
+      <div style={{ padding: 40 }}>
+        <h1>Join a Conference</h1>
+        <input placeholder="Room name" value={room} onChange={(e) => setRoom(e.target.value)} />
+        <input placeholder="Your name" value={identity} onChange={(e) => setIdentity(e.target.value)} />
+        <button onClick={joinRoom} disabled={!room || !identity}>Join</button>
+      </div>
+    );
+  }
+
+  return (
+    <LiveKitRoom token={token} serverUrl={wsUrl} connect={true} onDisconnected={leaveRoom}>
+      <VideoConference />
+    </LiveKitRoom>
+  );
+}
+```
+
+### Setup
+
+```bash
+npx create-next-app@latest my-conference --app --typescript
+cd my-conference
+npm install @dtelecom/server-sdk-js @dtelecom/livekit-client @dtelecom/components-react @dtelecom/components-styles
+```
+
+Create `.env.local`:
+```
+API_KEY=<your-api-key>
+API_SECRET=<your-api-secret>
+SOLANA_CONTRACT_ADDRESS=E2FcHsC9STeB6FEtxBKGAwMTX7cbfYMyjSHKs4QbBAmh
+SOLANA_NETWORK_HOST_HTTP=https://api.mainnet-beta.solana.com
+SOLANA_REGISTRY_AUTHORITY=6KVRs6Yr2oYzddepFdtWrFmVq8sgELcXzbUy7apwuQX4
+```
+
+Run: `npm run dev` — open two tabs at http://localhost:3000, join the same room with different names.
+
+---
+
+## Room Permissions Reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| roomCreate | bool | Permission to create rooms |
+| roomJoin | bool | Permission to join a room |
+| roomAdmin | bool | Permission to moderate a room |
+| room | string | Name of the room (required if join or admin is set) |
+| canPublish | bool | Allow participant to publish tracks |
+| canSubscribe | bool | Allow participant to subscribe to tracks |
+| canPublishData | bool | Allow participant to publish data messages |
+
+---
+
+## Webhook Events
+
+| Event | Fields | Description |
+|-------|--------|-------------|
+| `room_started` | room | A room was created |
+| `room_finished` | room | A room was closed |
+| `participant_joined` | room, participant | A participant joined |
+| `participant_left` | room, participant | A participant left |
+
+---
+
+## Source Code
+
+- Server SDK: https://github.com/dTelecom/server-sdk-js
+- Client SDK: https://github.com/dTelecom/client-sdk-js
+- React Components: https://github.com/dTelecom/components-js
+- Cloud Dashboard: https://cloud.dtelecom.org

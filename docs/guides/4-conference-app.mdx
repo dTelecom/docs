@@ -1,0 +1,192 @@
+---
+title: Conference App
+slug: /guides/conference-app
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+This guide shows how to build a minimal Google Meet-style conference app using Next.js and dTelecom's React components. The complete app is about 80 lines of code.
+
+## Prerequisites
+
+- Node.js 18+
+- API keys from [cloud.dtelecom.org](https://cloud.dtelecom.org) (see [Getting Started](/guides/getting-started))
+
+## Project setup
+
+```bash
+npx create-next-app@latest my-conference --app --typescript
+cd my-conference
+npm install @dtelecom/server-sdk-js @dtelecom/livekit-client @dtelecom/components-react @dtelecom/components-styles
+```
+
+Create `.env.local`:
+
+```bash
+API_KEY=<your-api-key>
+API_SECRET=<your-api-secret>
+SOLANA_CONTRACT_ADDRESS=E2FcHsC9STeB6FEtxBKGAwMTX7cbfYMyjSHKs4QbBAmh
+SOLANA_NETWORK_HOST_HTTP=https://api.mainnet-beta.solana.com
+SOLANA_REGISTRY_AUTHORITY=6KVRs6Yr2oYzddepFdtWrFmVq8sgELcXzbUy7apwuQX4
+```
+
+## Server: API route for joining rooms
+
+This route creates a token and resolves the WebSocket URL for the SFU node.
+
+```typescript title="app/api/join/route.ts"
+import { AccessToken } from '@dtelecom/server-sdk-js';
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(req: NextRequest) {
+  const { room, identity } = await req.json();
+
+  if (!room || !identity) {
+    return NextResponse.json({ error: 'room and identity are required' }, { status: 400 });
+  }
+
+  const at = new AccessToken(
+    process.env.API_KEY!,
+    process.env.API_SECRET!,
+    { identity, name: identity }
+  );
+  at.addGrant({
+    roomJoin: true,
+    room,
+    canPublish: true,
+    canSubscribe: true,
+  });
+
+  const token = at.toJwt();
+  const clientIp = (req.headers.get('x-forwarded-for') ?? '127.0.0.1').split(',')[0].trim();
+  const wsUrl = await at.getWsUrl(clientIp);
+
+  return NextResponse.json({ token, wsUrl });
+}
+```
+
+## Client: conference page
+
+```tsx title="app/page.tsx"
+'use client';
+import { LiveKitRoom, VideoConference } from '@dtelecom/components-react';
+import '@dtelecom/components-styles';
+import { useState } from 'react';
+
+export default function Home() {
+  const [room, setRoom] = useState('');
+  const [identity, setIdentity] = useState('');
+  const [token, setToken] = useState('');
+  const [wsUrl, setWsUrl] = useState('');
+
+  async function joinRoom() {
+    const res = await fetch('/api/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ room, identity }),
+    });
+    const data = await res.json();
+    setToken(data.token);
+    setWsUrl(data.wsUrl);
+  }
+
+  function leaveRoom() {
+    setToken('');
+    setWsUrl('');
+  }
+
+  // Show join form if not connected
+  if (!token || !wsUrl) {
+    return (
+      <div style={{ padding: 40 }}>
+        <h1>Join a Conference</h1>
+        <div>
+          <input
+            placeholder="Room name"
+            value={room}
+            onChange={(e) => setRoom(e.target.value)}
+          />
+          <input
+            placeholder="Your name"
+            value={identity}
+            onChange={(e) => setIdentity(e.target.value)}
+          />
+          <button onClick={joinRoom} disabled={!room || !identity}>
+            Join
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show video conference when connected
+  return (
+    <LiveKitRoom
+      token={token}
+      serverUrl={wsUrl}
+      connect={true}
+      onDisconnected={leaveRoom}
+    >
+      <VideoConference />
+    </LiveKitRoom>
+  );
+}
+```
+
+## How it works
+
+1. The user enters a room name and their display name, then clicks **Join**
+2. The client POSTs to `/api/join` which creates an Ed25519-signed JWT and queries Solana for the best SFU node
+3. The client receives `{ token, wsUrl }` and renders `<LiveKitRoom>` which connects via WebSocket
+4. `<VideoConference />` provides a complete UI with video tiles, mic/camera toggles, screen sharing, and a leave button
+5. When the user disconnects, `onDisconnected` resets state back to the join form
+
+## Running the app
+
+```bash
+npm run dev
+```
+
+Open two browser tabs at `http://localhost:3000`. Enter the same room name with different identities to start a video call.
+
+## Customizing the UI
+
+`<VideoConference />` is a pre-built layout. For more control, compose individual components:
+
+```tsx
+import {
+  LiveKitRoom,
+  GridLayout,
+  ParticipantTile,
+  useTracks,
+  RoomAudioRenderer,
+  ControlBar,
+} from '@dtelecom/components-react';
+import { Track } from '@dtelecom/livekit-client';
+
+function MyConference() {
+  const tracks = useTracks(
+    [
+      { source: Track.Source.Camera, withPlaceholder: true },
+      { source: Track.Source.ScreenShare, withPlaceholder: false },
+    ],
+    { onlySubscribed: false }
+  );
+
+  return (
+    <div style={{ height: '100vh' }}>
+      <GridLayout tracks={tracks}>
+        <ParticipantTile />
+      </GridLayout>
+      <RoomAudioRenderer />
+      <ControlBar />
+    </div>
+  );
+}
+```
+
+## Next steps
+
+- [Server APIs](/guides/server-api) — manage rooms and participants programmatically
+- [Publishing media](/guides/room/publish) — fine-grained control over tracks
+- [Webhooks](/guides/webhooks) — get notified when participants join/leave
