@@ -133,6 +133,63 @@ export default function Home() {
 }
 ```
 
+## Pre-join page
+
+For a better user experience, add a pre-join page where users can preview their camera and microphone before entering the room. Use the `<PreJoin>` component:
+
+```tsx title="app/prejoin/page.tsx"
+'use client';
+import { PreJoin, LocalUserChoices } from '@dtelecom/components-react';
+import '@dtelecom/components-styles';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+export default function PreJoinPage() {
+  const router = useRouter();
+  const [error, setError] = useState('');
+
+  async function handleSubmit(choices: LocalUserChoices) {
+    try {
+      const res = await fetch('/api/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room: 'my-room', identity: choices.username }),
+      });
+      const data = await res.json();
+      // Pass token and settings to the room page
+      const params = new URLSearchParams({
+        token: data.token,
+        wsUrl: data.wsUrl,
+        audioEnabled: String(choices.audioEnabled),
+        videoEnabled: String(choices.videoEnabled),
+      });
+      router.push(`/room?${params}`);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  }
+
+  return (
+    <div style={{ height: '100vh' }}>
+      {error && <div style={{ color: 'red', padding: 16 }}>{error}</div>}
+      <PreJoin
+        onSubmit={handleSubmit}
+        onError={(err) => setError(err.message)}
+        defaults={{ username: '', videoEnabled: true, audioEnabled: true }}
+      />
+    </div>
+  );
+}
+```
+
+The `<PreJoin>` component provides:
+- Camera and microphone preview
+- Device selection dropdowns
+- Username input
+- `LocalUserChoices` returned on submit: `{ username, videoEnabled, audioEnabled, videoDeviceId, audioDeviceId }`
+
+**Camera-off placeholder:** When a participant's camera is off, `<ParticipantTile>` automatically shows a placeholder with the participant's name — no extra code needed.
+
 ## How it works
 
 1. The user enters a room name and their display name, then clicks **Join**
@@ -184,6 +241,46 @@ function MyConference() {
   );
 }
 ```
+
+## Adding chat
+
+Add in-room chat with the `<Chat>` component. Make sure the token grant includes `canPublishData: true`:
+
+```typescript
+// In your API route, add canPublishData to the grant:
+at.addGrant({
+  roomJoin: true,
+  room,
+  canPublish: true,
+  canSubscribe: true,
+  canPublishData: true, // required for chat
+});
+```
+
+```tsx title="ChatPanel.tsx"
+import { Chat } from '@dtelecom/components-react';
+
+// Inside a <LiveKitRoom> component:
+function ChatPanel() {
+  return (
+    <div style={{ width: 320, height: '100%' }}>
+      <Chat />
+    </div>
+  );
+}
+```
+
+For a custom chat UI, use the `useChat` hook — see [Working with Data](/guides/room/data#built-in-chat).
+
+## Host controls
+
+To let the room creator kick or mute participants, use the role-in-metadata pattern:
+
+1. **Set role in token** — pass `metadata: JSON.stringify({ role: 'host' })` when creating the token (see [Access Tokens](/guides/access-tokens#role-based-metadata-example))
+2. **Read role on client** — use `useLocalParticipant()` to check if the current user is a host
+3. **Verify on backend** — your API route checks the caller's metadata before calling `RoomServiceClient.removeParticipant()` or `.mutePublishedTrack()`
+
+See [Host controls pattern](/guides/server-api#host-controls-pattern) for complete endpoint examples.
 
 ## Next steps
 

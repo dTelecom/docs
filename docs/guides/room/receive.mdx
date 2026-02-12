@@ -6,6 +6,39 @@ import TabItem from '@theme/TabItem';
 
 While connected to a room, the server may send down one or more audio/video/data tracks at any time. By default, a client automatically subscribes to a received track, and lets your app know by invoking callbacks on the room object and associated participant who published the track.
 
+## Listing participants
+
+Use React hooks to get the list of participants in a room:
+
+```tsx title="React"
+import { useParticipants, useRemoteParticipants, useLocalParticipant } from '@dtelecom/components-react';
+
+function ParticipantList() {
+  // All participants (local + remote)
+  const participants = useParticipants();
+
+  // Only remote participants
+  const remoteParticipants = useRemoteParticipants();
+
+  // Local participant info
+  const { localParticipant } = useLocalParticipant();
+
+  return (
+    <div>
+      <p>You: {localParticipant.name || localParticipant.identity}</p>
+      <p>{remoteParticipants.length} other(s) in the room</p>
+      <ul>
+        {participants.map((p) => (
+          <li key={p.identity}>{p.name || p.identity}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+These hooks must be used inside a `<LiveKitRoom>` component. They automatically update when participants join or leave.
+
 ## Track subscription
 
 Receiving tracks from the server starts with a subscription.

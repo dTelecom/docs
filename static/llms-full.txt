@@ -32,7 +32,7 @@ npm install @dtelecom/livekit-client @dtelecom/components-react @dtelecom/compon
 |---------|---------|
 | `@dtelecom/server-sdk-js` | Server: AccessToken, getWsUrl(), RoomServiceClient, WebhookReceiver, EgressClient, IngressClient |
 | `@dtelecom/livekit-client` | Client: Room, RoomEvent, Track, LocalParticipant, RemoteParticipant |
-| `@dtelecom/components-react` | React: LiveKitRoom, VideoConference, GridLayout, ParticipantTile, ControlBar, useTracks, useConnectionState |
+| `@dtelecom/components-react` | React: LiveKitRoom, VideoConference, PreJoin, Chat, GridLayout, ParticipantTile, ControlBar, useTracks, useChat, useParticipants, useLocalParticipant, useRemoteParticipants, useRoomContext, useConnectionState |
 | `@dtelecom/components-styles` | Default CSS styles for React components |
 
 ---
@@ -42,12 +42,14 @@ npm install @dtelecom/livekit-client @dtelecom/components-react @dtelecom/compon
 ```bash
 API_KEY=<from-cloud.dtelecom.org>
 API_SECRET=<from-cloud.dtelecom.org>
+DTELECOM_API_HOST=https://<your-dtelecom-host>
 SOLANA_CONTRACT_ADDRESS=E2FcHsC9STeB6FEtxBKGAwMTX7cbfYMyjSHKs4QbBAmh
 SOLANA_NETWORK_HOST_HTTP=https://api.mainnet-beta.solana.com
 SOLANA_REGISTRY_AUTHORITY=6KVRs6Yr2oYzddepFdtWrFmVq8sgELcXzbUy7apwuQX4
 ```
 
 - `API_KEY` / `API_SECRET`: Ed25519 keypair from cloud.dtelecom.org (project-specific)
+- `DTELECOM_API_HOST`: Twirp HTTP endpoint for `RoomServiceClient` (needed for room/participant management)
 - The three `SOLANA_*` values are mainnet constants (same for all projects)
 - The server SDK reads these from `process.env` automatically
 
@@ -98,12 +100,34 @@ const token = at.toJwt();
 const wsUrl = await at.getWsUrl(clientIp);
 ```
 
+### Role-based metadata pattern
+
+Embed a role in participant metadata for host/guest differentiation:
+
+```typescript
+// Server-side: set role in token
+const metadata = JSON.stringify({ role: 'host' }); // or 'guest'
+const at = new AccessToken(apiKey, apiSecret, { identity: 'user-1', name: 'Alice', metadata });
+at.addGrant({ roomJoin: true, room: 'my-room', canPublish: true, canSubscribe: true, canPublishData: true });
+```
+
+```tsx
+// Client-side: read role from metadata
+import { useLocalParticipant } from '@dtelecom/components-react';
+
+const { localParticipant } = useLocalParticipant();
+const meta = JSON.parse(localParticipant.metadata || '{}');
+const isHost = meta.role === 'host';
+// Use isHost to conditionally render kick/mute buttons (UI only — verify server-side before acting)
+```
+
 ### RoomServiceClient
 
 ```typescript
 import { RoomServiceClient } from '@dtelecom/server-sdk-js';
 
-const client = new RoomServiceClient('https://your-host', apiKey, apiSecret);
+// DTELECOM_API_HOST is the Twirp HTTP endpoint (different from the WebSocket URL)
+const client = new RoomServiceClient(process.env.DTELECOM_API_HOST!, apiKey, apiSecret);
 
 // Create a room
 const room = await client.createRoom({
@@ -149,6 +173,30 @@ const data = encoder.encode(JSON.stringify({ message: 'hello' }));
 await client.sendData('my-room', data, 0); // 0=RELIABLE, 1=LOSSY
 await client.sendData('my-room', data, 0, { destinationSids: ['PA_xxx'], topic: 'chat' });
 ```
+
+### Host controls pattern
+
+To let hosts kick or mute participants, your backend verifies the caller's role before executing:
+
+```typescript
+// Backend API route (e.g. /api/kick)
+import { RoomServiceClient } from '@dtelecom/server-sdk-js';
+
+const client = new RoomServiceClient(process.env.DTELECOM_API_HOST!, apiKey, apiSecret);
+
+// 1. Verify the caller is a host by checking their metadata on the server
+const caller = await client.getParticipant(room, callerIdentity);
+const callerMeta = JSON.parse(caller.metadata || '{}');
+if (callerMeta.role !== 'host') {
+  return NextResponse.json({ error: 'Only hosts can kick participants' }, { status: 403 });
+}
+
+// 2. Execute the privileged action
+await client.removeParticipant(room, targetIdentity);  // kick
+// or: await client.mutePublishedTrack(room, targetIdentity, trackSid, true);  // mute
+```
+
+Never trust client-side role checks alone — always verify on the server.
 
 ### WebhookReceiver
 
@@ -234,11 +282,74 @@ import { LiveKitRoom, VideoConference } from '@dtelecom/components-react';
 import '@dtelecom/components-styles';
 
 // Simple usage — full conference UI
-<LiveKitRoom token={token} serverUrl={wsUrl} connect={true} onDisconnected={handleLeave}>
+<LiveKitRoom
+  token={token}
+  serverUrl={wsUrl}
+  connect={true}
+  audio={true}              // auto-enable microphone on join
+  video={true}              // auto-enable camera on join
+  onConnected={() => {}}
+  onDisconnected={handleLeave}
+  onError={(error) => console.error('Room error:', error)}
+  onMediaDeviceFailure={(failure) => {
+    // Camera/mic permission denied or device unavailable
+    alert('Could not access camera or microphone.');
+  }}
+>
   <VideoConference />
 </LiveKitRoom>
+```
 
-// Custom layout
+#### PreJoin component
+
+```tsx
+import { PreJoin, LocalUserChoices } from '@dtelecom/components-react';
+import '@dtelecom/components-styles';
+
+// Pre-join page for camera/mic preview and device selection
+<PreJoin
+  onSubmit={(choices: LocalUserChoices) => {
+    // choices: { username, videoEnabled, audioEnabled, videoDeviceId, audioDeviceId }
+    // Fetch token and navigate to room page
+  }}
+  onError={(err) => console.error(err.message)}
+  defaults={{ username: 'Alice', videoEnabled: true, audioEnabled: true }}
+/>
+```
+
+`ParticipantTile` auto-shows a name placeholder when the camera is off — no extra code needed.
+
+#### Chat component
+
+```tsx
+import { Chat } from '@dtelecom/components-react';
+
+// Inside a <LiveKitRoom> — renders full chat UI (requires canPublishData: true in token grant)
+<Chat />
+```
+
+```tsx
+// Custom chat UI with useChat hook
+import { useChat } from '@dtelecom/components-react';
+
+function CustomChat() {
+  const { chatMessages, send } = useChat();
+  return (
+    <div>
+      {chatMessages.map((msg) => (
+        <div key={msg.timestamp}><strong>{msg.from?.name}: </strong>{msg.message}</div>
+      ))}
+      <form onSubmit={(e) => { e.preventDefault(); send(inputValue); }}>
+        <input ... />
+      </form>
+    </div>
+  );
+}
+```
+
+#### Custom layout
+
+```tsx
 import { GridLayout, ParticipantTile, useTracks, RoomAudioRenderer, ControlBar, useConnectionState } from '@dtelecom/components-react';
 import { Track, ConnectionState } from '@dtelecom/livekit-client';
 
@@ -262,11 +373,31 @@ function MyConference() {
 }
 ```
 
+#### Participant hooks
+
+```tsx
+import { useParticipants, useRemoteParticipants, useLocalParticipant, useRoomContext } from '@dtelecom/components-react';
+
+// All participants (local + remote)
+const participants = useParticipants();
+
+// Only remote participants
+const remoteParticipants = useRemoteParticipants();
+
+// Local participant info
+const { localParticipant } = useLocalParticipant();
+
+// Access the Room object directly
+const room = useRoomContext();
+```
+
+All hooks must be used inside a `<LiveKitRoom>` component.
+
 ---
 
 ## Complete Conference App (Next.js)
 
-A minimal Google Meet-style conference app. Two files, ~80 lines total.
+A minimal Google Meet-style conference app. The basic version is two files, ~80 lines total. For a full-featured app with PreJoin, Chat, and host controls, see `CONFERENCE_APP_PLAN.md` in the repository.
 
 ### Server: app/api/join/route.ts
 
@@ -291,6 +422,7 @@ export async function POST(req: NextRequest) {
     room,
     canPublish: true,
     canSubscribe: true,
+    canPublishData: true, // needed for chat
   });
 
   const token = at.toJwt();
@@ -381,7 +513,7 @@ Run: `npm run dev` — open two tabs at http://localhost:3000, join the same roo
 | room | string | Name of the room (required if join or admin is set) |
 | canPublish | bool | Allow participant to publish tracks |
 | canSubscribe | bool | Allow participant to subscribe to tracks |
-| canPublishData | bool | Allow participant to publish data messages |
+| canPublishData | bool | Allow participant to publish data messages (required for chat) |
 
 ---
 

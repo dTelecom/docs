@@ -60,8 +60,9 @@ Room permissions are specified in the `video` field of a decoded join token. It 
 | roomJoin     | bool   | permission to join a room                                 |
 | roomAdmin    | bool   | permission to moderate a room                             |
 | room         | string | name of the room, required if join or admin is set        |
-| canPublish   | bool   | allow participant to publish tracks                       |
-| canSubscribe | bool   | allow participant to subscribe to tracks                  |
+| canPublish     | bool   | allow participant to publish tracks                       |
+| canSubscribe   | bool   | allow participant to subscribe to tracks                  |
+| canPublishData | bool   | allow participant to send data messages (needed for chat) |
 
 ### Example: subscribe-only token
 
@@ -89,3 +90,40 @@ A tokens has an expiration time. We recommend setting it to the expected duratio
 You may also attach any arbitrary metadata onto each participant via the `metadata` field. This data is opaque to dTelecom.
 
 When provided, dTelecom will attach the metadata to the participant object that the clients would receive.
+
+### Role-based metadata example
+
+A common pattern is embedding a role (e.g. `host` or `guest`) in the participant metadata. This lets the client show different UI based on role, and the backend can verify the role before allowing privileged actions.
+
+**Server-side** — set role when creating the token:
+
+```typescript
+const metadata = JSON.stringify({ role: 'host' }); // or 'guest'
+
+const at = new AccessToken(apiKey, apiSecret, {
+  identity: 'user-1',
+  name: 'Alice',
+  metadata,
+});
+at.addGrant({ roomJoin: true, room: 'my-room', canPublish: true, canSubscribe: true, canPublishData: true });
+```
+
+**Client-side** — read role from metadata:
+
+```tsx
+import { useLocalParticipant } from '@dtelecom/components-react';
+
+function HostBadge() {
+  const { localParticipant } = useLocalParticipant();
+  const meta = JSON.parse(localParticipant.metadata || '{}');
+
+  if (meta.role === 'host') {
+    return <span>Host</span>;
+  }
+  return null;
+}
+```
+
+:::caution Security note
+Always verify the participant's role **server-side** before executing privileged actions (kick, mute, etc.). The client-side metadata check is only for UI rendering — a malicious client could modify its own UI. See [Host controls pattern](/guides/server-api#host-controls-pattern) for the full flow.
+:::

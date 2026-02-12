@@ -48,14 +48,16 @@ These rules are non-negotiable. Violating them will produce broken code.
    - React: `@dtelecom/components-react` (NOT `@livekit/components-react`)
    - Styles: `@dtelecom/components-styles` (NOT `@livekit/components-styles`)
 
-3. ALWAYS include all five environment variables. The three Solana values are mainnet constants — do not change them:
+3. ALWAYS include all environment variables. The three Solana values are mainnet constants — do not change them:
    ```
    API_KEY=<from-cloud.dtelecom.org>
    API_SECRET=<from-cloud.dtelecom.org>
+   DTELECOM_API_HOST=https://<your-dtelecom-host>
    SOLANA_CONTRACT_ADDRESS=E2FcHsC9STeB6FEtxBKGAwMTX7cbfYMyjSHKs4QbBAmh
    SOLANA_NETWORK_HOST_HTTP=https://api.mainnet-beta.solana.com
    SOLANA_REGISTRY_AUTHORITY=6KVRs6Yr2oYzddepFdtWrFmVq8sgELcXzbUy7apwuQX4
    ```
+   `DTELECOM_API_HOST` is the Twirp HTTP endpoint for `RoomServiceClient` (needed for room management, host controls).
 
 4. Token creation and `getWsUrl()` MUST happen server-side. Never expose API_KEY or API_SECRET to the client. The server returns `{ token, wsUrl }` to the client.
 
@@ -121,15 +123,22 @@ npm install @dtelecom/components-react @dtelecom/components-styles
 ```
 
 Key exports:
-- `LiveKitRoom` — Root component. Props: `token`, `serverUrl`, `connect`, `onConnected`, `onDisconnected`
+- `LiveKitRoom` — Root component. Props: `token`, `serverUrl`, `connect`, `audio`, `video`, `onConnected`, `onDisconnected`, `onError`, `onMediaDeviceFailure`
 - `VideoConference` — Complete pre-built conference UI with video tiles, controls, screen sharing
+- `PreJoin` — Pre-join page with camera/mic preview and device selection. Props: `onSubmit`, `onError`, `defaults`
+- `LocalUserChoices` — Interface returned by PreJoin onSubmit: `{ username, videoEnabled, audioEnabled, videoDeviceId, audioDeviceId }`
+- `Chat` — Pre-built chat UI (requires `canPublishData: true` in token grant)
 - `GridLayout` — Grid layout for participant tiles
-- `ParticipantTile` — Single participant video/audio tile
+- `ParticipantTile` — Single participant video/audio tile (auto-shows name placeholder when camera is off)
 - `ControlBar` — Mic, camera, screen share, leave buttons
 - `RoomAudioRenderer` — Renders all audio tracks (required for hearing remote participants)
 - `useTracks` — Hook to get tracks by source
+- `useChat` — Hook for custom chat UI: `{ chatMessages, send }`
+- `useParticipants` — Hook to get all participants (local + remote)
+- `useLocalParticipant` — Hook to get the local participant: `{ localParticipant }`
+- `useRemoteParticipants` — Hook to get only remote participants
+- `useRoomContext` — Hook to access the Room object directly
 - `useConnectionState` — Hook to get connection state
-- `useParticipant` — Hook to get participant info
 
 Always import styles when using React components:
 ```typescript
@@ -148,13 +157,13 @@ When creating an AccessToken, use `.addGrant()` with these fields:
 | room | string | Room name (required when roomJoin is true) |
 | canPublish | bool | Can publish audio/video tracks |
 | canSubscribe | bool | Can subscribe to others' tracks |
-| canPublishData | bool | Can send data messages |
+| canPublishData | bool | Can send data messages (required for chat) |
 | roomCreate | bool | Can create rooms (admin tokens) |
 | roomAdmin | bool | Can moderate rooms (admin tokens) |
 
 For a standard participant joining a call:
 ```typescript
-at.addGrant({ roomJoin: true, room: roomName, canPublish: true, canSubscribe: true });
+at.addGrant({ roomJoin: true, room: roomName, canPublish: true, canSubscribe: true, canPublishData: true });
 ```
 
 </access_token_grants>
@@ -367,6 +376,103 @@ export default function Page({ token, wsUrl }: { token: string; wsUrl: string })
 
 </reference_example>
 
+<reference_example id="pre-join-page">
+
+For a pre-join page with camera/mic preview before entering the room:
+
+```tsx
+'use client';
+import { PreJoin, LocalUserChoices } from '@dtelecom/components-react';
+import '@dtelecom/components-styles';
+
+export default function PreJoinPage() {
+  async function handleSubmit(choices: LocalUserChoices) {
+    // choices: { username, videoEnabled, audioEnabled, videoDeviceId, audioDeviceId }
+    const res = await fetch('/api/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ room: 'my-room', identity: choices.username }),
+    });
+    const { token, wsUrl } = await res.json();
+    // Navigate to room page with token, wsUrl, and device settings
+  }
+
+  return (
+    <PreJoin
+      onSubmit={handleSubmit}
+      onError={(err) => console.error(err.message)}
+      defaults={{ username: '', videoEnabled: true, audioEnabled: true }}
+    />
+  );
+}
+```
+
+</reference_example>
+
+<reference_example id="chat-usage">
+
+For in-room chat using the built-in component (requires `canPublishData: true` in token grant):
+
+```tsx
+import { Chat } from '@dtelecom/components-react';
+
+// Inside a <LiveKitRoom> — renders a complete chat UI
+<Chat />
+```
+
+For custom chat UI:
+
+```tsx
+import { useChat } from '@dtelecom/components-react';
+
+function CustomChat() {
+  const { chatMessages, send } = useChat();
+  return (
+    <div>
+      {chatMessages.map((msg) => (
+        <div key={msg.timestamp}><strong>{msg.from?.name}: </strong>{msg.message}</div>
+      ))}
+      <form onSubmit={(e) => { e.preventDefault(); send(inputValue); }}>
+        <input ... />
+      </form>
+    </div>
+  );
+}
+```
+
+</reference_example>
+
+<reference_example id="host-controls-pattern">
+
+For host controls (kick/mute), embed role in token metadata and verify server-side:
+
+```typescript
+// 1. Server: embed role in token metadata
+const metadata = JSON.stringify({ role: 'host' }); // or 'guest'
+const at = new AccessToken(apiKey, apiSecret, { identity, name, metadata });
+at.addGrant({ roomJoin: true, room, canPublish: true, canSubscribe: true, canPublishData: true });
+
+// 2. Client: read role from metadata (for UI only)
+import { useLocalParticipant } from '@dtelecom/components-react';
+const { localParticipant } = useLocalParticipant();
+const meta = JSON.parse(localParticipant.metadata || '{}');
+const isHost = meta.role === 'host';
+
+// 3. Backend: verify role before privileged actions
+import { RoomServiceClient } from '@dtelecom/server-sdk-js';
+const client = new RoomServiceClient(process.env.DTELECOM_API_HOST!, apiKey, apiSecret);
+
+const caller = await client.getParticipant(room, callerIdentity);
+const callerMeta = JSON.parse(caller.metadata || '{}');
+if (callerMeta.role !== 'host') {
+  return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+}
+await client.removeParticipant(room, targetIdentity);  // kick
+// or: await client.mutePublishedTrack(room, targetIdentity, trackSid, true);  // mute
+```
+
+</reference_example>
+
 <reference_example id="server-room-management">
 
 For server-side room management:
@@ -468,5 +574,7 @@ Avoid these frequent errors:
 6. WRONG: Calling `getWsUrl()` client-side → It requires the server SDK and API credentials.
 7. WRONG: Omitting `@dtelecom/components-styles` import → React components will render without any styling.
 8. WRONG: Passing `'127.0.0.1'` as clientIp in production → Extract real IP from `x-forwarded-for` for proper geographic node selection.
+9. WRONG: Building a custom chat from scratch with `publishData` → Use the built-in `<Chat>` component or `useChat` hook from `@dtelecom/components-react`.
+10. WRONG: Calling `RoomServiceClient` from frontend code → Server SDK must only be used server-side (API routes). The frontend should call your API routes, which then call the server SDK.
 
 </common_mistakes>

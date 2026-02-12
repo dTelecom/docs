@@ -17,8 +17,14 @@ The easiest way to interact with Room APIs is through the `RoomServiceClient` in
 ```typescript
 import { RoomServiceClient } from '@dtelecom/server-sdk-js';
 
-const client = new RoomServiceClient('https://your-dtelecom-host', 'api-key', 'api-secret');
+const client = new RoomServiceClient(
+  process.env.DTELECOM_API_HOST!,  // Twirp HTTP endpoint (e.g. https://your-dtelecom-host)
+  process.env.API_KEY!,
+  process.env.API_SECRET!
+);
 ```
+
+The first argument is the **Twirp HTTP endpoint** (`DTELECOM_API_HOST`). This is different from the WebSocket URL returned by `getWsUrl()` — the WebSocket URL is for client connections, while the HTTP host is for server-side API calls.
 
 Note: For most operations, you'll use the SDK methods shown below rather than calling the HTTP endpoints directly.
 
@@ -219,3 +225,73 @@ await client.sendData('my-room', data, 0, {
   topic: 'chat',
 });
 ```
+
+## Host controls pattern
+
+A common requirement is letting hosts kick or mute other participants. The pattern is:
+
+1. **Token creation** — embed a role in participant metadata (see [Access Tokens](/guides/access-tokens#role-based-metadata-example))
+2. **Frontend** — read the role from metadata to show/hide host controls
+3. **Your backend** — verify the caller's role before calling the server SDK
+
+Here is the full flow:
+
+### Kick endpoint
+
+```typescript title="app/api/kick/route.ts"
+import { RoomServiceClient } from '@dtelecom/server-sdk-js';
+import { NextRequest, NextResponse } from 'next/server';
+
+const client = new RoomServiceClient(
+  process.env.DTELECOM_API_HOST!,
+  process.env.API_KEY!,
+  process.env.API_SECRET!
+);
+
+export async function POST(req: NextRequest) {
+  const { room, identity, callerIdentity } = await req.json();
+
+  // 1. Verify the caller is a host by checking their metadata on the server
+  const caller = await client.getParticipant(room, callerIdentity);
+  const callerMeta = JSON.parse(caller.metadata || '{}');
+  if (callerMeta.role !== 'host') {
+    return NextResponse.json({ error: 'Only hosts can kick participants' }, { status: 403 });
+  }
+
+  // 2. Remove the participant
+  await client.removeParticipant(room, identity);
+  return NextResponse.json({ success: true });
+}
+```
+
+### Mute endpoint
+
+```typescript title="app/api/mute/route.ts"
+import { RoomServiceClient } from '@dtelecom/server-sdk-js';
+import { NextRequest, NextResponse } from 'next/server';
+
+const client = new RoomServiceClient(
+  process.env.DTELECOM_API_HOST!,
+  process.env.API_KEY!,
+  process.env.API_SECRET!
+);
+
+export async function POST(req: NextRequest) {
+  const { room, identity, trackSid, callerIdentity } = await req.json();
+
+  // 1. Verify the caller is a host
+  const caller = await client.getParticipant(room, callerIdentity);
+  const callerMeta = JSON.parse(caller.metadata || '{}');
+  if (callerMeta.role !== 'host') {
+    return NextResponse.json({ error: 'Only hosts can mute participants' }, { status: 403 });
+  }
+
+  // 2. Mute the track
+  await client.mutePublishedTrack(room, identity, trackSid, true);
+  return NextResponse.json({ success: true });
+}
+```
+
+:::caution
+Always verify the caller's role on the server. The client-side role check (from metadata) is only for UI rendering. A malicious client could call your API directly, so your backend must be the gatekeeper.
+:::

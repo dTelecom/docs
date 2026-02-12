@@ -6,6 +6,50 @@ import TabItem from '@theme/TabItem';
 
 With dTelecom maintaining room state, you can use it to pass around custom application data. We have a flexible system that enables you to pass messages from both the backend, and between participants.
 
+## Built-in chat
+
+The simplest way to add chat to your app is the pre-built `<Chat>` component:
+
+```tsx title="React"
+import { Chat } from '@dtelecom/components-react';
+
+// Inside a <LiveKitRoom> component:
+<Chat />
+```
+
+This renders a full chat UI with message history and an input field. It requires `canPublishData: true` in the participant's token grant.
+
+For a custom chat UI, use the `useChat` hook:
+
+```tsx title="React"
+import { useChat } from '@dtelecom/components-react';
+
+function CustomChat() {
+  const { chatMessages, send } = useChat();
+  const [input, setInput] = useState('');
+
+  return (
+    <div>
+      {chatMessages.map((msg) => (
+        <div key={msg.timestamp}>
+          <strong>{msg.from?.name}: </strong>{msg.message}
+        </div>
+      ))}
+      <form onSubmit={(e) => {
+        e.preventDefault();
+        send(input);
+        setInput('');
+      }}>
+        <input value={input} onChange={(e) => setInput(e.target.value)} />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+  );
+}
+```
+
+Both `<Chat>` and `useChat` must be used inside a `<LiveKitRoom>` component.
+
 ## Participant metadata
 
 dTelecom participants have a `metadata` field that you could use to store application-specific data. For example, this could be the seat number around a table, or other participant-specific state.

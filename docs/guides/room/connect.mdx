@@ -182,3 +182,78 @@ room.on(RoomEvent.Disconnected, () => {
 </Tabs>
 
 During the reconnection, the video/audio tracks may stop sending/receiving data for a few seconds. When the connection is re-established, the tracks will then "unfreeze".
+
+## Error handling
+
+<Tabs
+  defaultValue="react"
+  groupId="client-sdk"
+  values={[
+    {label: 'React', value: 'react'},
+    {label: 'Browser', value: 'typescript'},
+  ]}>
+  <TabItem value="react">
+
+`<LiveKitRoom>` provides callbacks for error handling:
+
+```tsx title="React"
+<LiveKitRoom
+  token={token}
+  serverUrl={wsUrl}
+  connect={true}
+  audio={true}
+  video={true}
+  onError={(error) => {
+    // Connection errors, room errors, etc.
+    console.error('Room error:', error);
+  }}
+  onMediaDeviceFailure={(failure) => {
+    // Camera or microphone access failed (permissions denied, device unavailable)
+    console.error('Media device failure:', failure);
+    alert('Could not access camera or microphone. Please check your browser permissions.');
+  }}
+  onDisconnected={() => {
+    // Handle disconnection (navigate away, show reconnect UI, etc.)
+  }}
+>
+  <VideoConference />
+</LiveKitRoom>
+```
+
+| Callback | When it fires |
+|:---------|:-------------|
+| `onError` | Connection failures, room errors, general errors |
+| `onMediaDeviceFailure` | Camera/microphone permission denied or device unavailable |
+| `onDisconnected` | WebSocket connection closed (user left or network failure) |
+| `onConnected` | Successfully connected to the room |
+
+The `audio` and `video` props control whether to automatically enable the microphone and camera on join.
+
+  </TabItem>
+  <TabItem value="typescript">
+
+```typescript title="Vanilla TypeScript"
+import { Room, RoomEvent, MediaDeviceFailure } from '@dtelecom/livekit-client';
+
+const room = new Room();
+
+// Handle connection errors
+try {
+  await room.connect(wsUrl, token);
+} catch (error) {
+  console.error('Failed to connect:', error);
+}
+
+// Handle media device errors
+room.on(RoomEvent.MediaDevicesError, (error: Error) => {
+  console.error('Media device error:', error);
+});
+
+// Handle disconnection
+room.on(RoomEvent.Disconnected, (reason) => {
+  console.log('Disconnected:', reason);
+});
+```
+
+  </TabItem>
+</Tabs>

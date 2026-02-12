@@ -46,8 +46,9 @@ Your server needs these environment variables:
 | `SOLANA_CONTRACT_ADDRESS` | `E2FcHsC9STeB6FEtxBKGAwMTX7cbfYMyjSHKs4QbBAmh` | Address of the node registry smart contract |
 | `SOLANA_NETWORK_HOST_HTTP` | `https://api.mainnet-beta.solana.com` | Solana RPC endpoint |
 | `SOLANA_REGISTRY_AUTHORITY` | `6KVRs6Yr2oYzddepFdtWrFmVq8sgELcXzbUy7apwuQX4` | Authority key for the registry |
+| `DTELECOM_API_HOST` | `https://<your-dtelecom-host>` | Twirp HTTP endpoint for `RoomServiceClient` (room/participant management) |
 
-The `API_KEY` and `API_SECRET` are project-specific (from the cloud dashboard). The three `SOLANA_*` values are mainnet constants shared across all projects.
+The `API_KEY` and `API_SECRET` are project-specific (from the cloud dashboard). The three `SOLANA_*` values are mainnet constants shared across all projects. `DTELECOM_API_HOST` is only needed if you use [Server APIs](/guides/server-api) to manage rooms or moderate participants.
 
 ## Why LiveKit component names are kept
 
