@@ -36,6 +36,14 @@ module.exports = {
        'references/client-sdks',
        'references/server-sdks',
       ]
+    },
+    {
+      type: 'category',
+      label: 'LLM Resources',
+      collapsed: true,
+      items: [
+        'llm-resources/index',
+      ]
     }
   ],
 };

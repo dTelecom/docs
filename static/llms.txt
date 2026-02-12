@@ -6,6 +6,7 @@ For complete content in a single file: [/llms-full.txt](https://docs.dtelecom.or
 For AI system prompt: [/prompt.txt](https://docs.dtelecom.org/prompt.txt)
 All pages as markdown index: [/docs.md](https://docs.dtelecom.org/docs.md)
 Conference app blueprint (full code + architecture): [CONFERENCE_APP_PLAN.md](https://github.com/dTelecom/docs/blob/main/CONFERENCE_APP_PLAN.md)
+Example app created 100% by AI agent: [dTelecom Meet](https://github.com/dTelecom/dtelecom-meet) | [Live Demo](https://dtelecom-meet-demo.vercel.app/)
 
 ## Docs
 
@@ -22,6 +23,7 @@ Conference app blueprint (full code + architecture): [CONFERENCE_APP_PLAN.md](ht
 - [Conference App](https://docs.dtelecom.org/guides/conference-app.md): Complete Google Meet-style app tutorial — Next.js API route, PreJoin page, React room with LiveKitRoom/VideoConference, Chat, host controls (kick/mute), webhooks participant count
 - [Client SDKs](https://docs.dtelecom.org/references/client-sdks.md): @dtelecom/livekit-client, @dtelecom/components-react, @dtelecom/components-styles — install, packages, LiveKit compatibility
 - [Server SDKs](https://docs.dtelecom.org/references/server-sdks.md): @dtelecom/server-sdk-js — AccessToken, RoomServiceClient, WebhookReceiver, EgressClient, IngressClient, getWsUrl(), getApiUrl()
+- [LLM Resources](https://docs.dtelecom.org/llm-resources): All AI-friendly files (llms.txt, llms-full.txt, prompt.txt), dTelecom Meet example app (created 100% by AI agent)
 
 ## Key packages
 
