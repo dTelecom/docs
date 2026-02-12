@@ -5,6 +5,7 @@
 For complete content in a single file: [/llms-full.txt](https://docs.dtelecom.org/llms-full.txt)
 For AI system prompt: [/prompt.txt](https://docs.dtelecom.org/prompt.txt)
 All pages as markdown index: [/docs.md](https://docs.dtelecom.org/docs.md)
+Conference app blueprint (full code + architecture): [CONFERENCE_APP_PLAN.md](https://github.com/dTelecom/docs/blob/main/CONFERENCE_APP_PLAN.md)
 
 ## Docs
 

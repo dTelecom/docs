@@ -505,7 +505,7 @@ Example override:
 
 ## Complete Conference App (Next.js)
 
-A minimal Google Meet-style conference app. The basic version is two files, ~80 lines total. For a full-featured app with PreJoin, Chat, and host controls, see `CONFERENCE_APP_PLAN.md` in the repository.
+A minimal Google Meet-style conference app. The basic version is two files, ~80 lines total. For a full-featured app with PreJoin, Chat, host controls, and screen sharing, see the [Conference App Plan](https://github.com/dTelecom/docs/blob/main/CONFERENCE_APP_PLAN.md) — a complete blueprint with all code, architecture notes, and SDK mapping.
 
 ### Server: app/api/join/route.ts
 

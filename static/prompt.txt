@@ -237,6 +237,7 @@ Each event contains a `room` object. Participant events also contain a `particip
 <reference_example id="next-js-conference-app">
 
 This is the canonical reference for a minimal working dTelecom conference app.
+For a full-featured version with PreJoin, Chat, host controls (kick/mute), and screen sharing, see the complete blueprint: https://github.com/dTelecom/docs/blob/main/CONFERENCE_APP_PLAN.md
 
 ## Install
 
