@@ -1,36 +1,123 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# dTelecom Meet
 
-## Getting Started
+Open-source video conferencing app built on [dTelecom](https://dtelecom.org) — a decentralized WebRTC platform with Solana-based node discovery.
 
-First, run the development server:
+Think Google Meet, but decentralized and self-hostable.
+
+## Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FdTelecom%2Fdtelecom-meet&env=API_KEY,API_SECRET&envDescription=Get%20your%20API%20keys%20from%20cloud.dtelecom.org&envLink=https%3A%2F%2Fcloud.dtelecom.org&project-name=dtelecom-meet&repository-name=dtelecom-meet)
+
+You only need two environment variables:
+
+| Variable | Description |
+|---|---|
+| `API_KEY` | Your dTelecom API key from [cloud.dtelecom.org](https://cloud.dtelecom.org) |
+| `API_SECRET` | Your dTelecom API secret |
+
+Webhook URL and Solana network settings are configured automatically.
+
+## Features
+
+- **Video & audio conferencing** — camera, microphone, screen sharing
+- **Pre-join preview** — test your camera/mic before entering the room
+- **Host controls** — kick and mute participants
+- **In-room chat** — real-time text messaging via data channels
+- **Live participant count** — see how many people are in a room before joining
+- **Webhook integration** — SFU nodes push `participant_joined` / `participant_left` / `room_finished` events
+- **Decentralized** — no single point of failure, SFU nodes discovered via Solana registry
+
+## Tech Stack
+
+- [Next.js](https://nextjs.org) 16 (App Router)
+- [React](https://react.dev) 19
+- [@dtelecom/components-react](https://www.npmjs.com/package/@dtelecom/components-react) — LiveKitRoom, VideoConference, PreJoin, Chat
+- [@dtelecom/server-sdk-js](https://www.npmjs.com/package/@dtelecom/server-sdk-js) — tokens, room service, webhook verification
+- [Tailwind CSS](https://tailwindcss.com) 4
+
+## Local Development
+
+### 1. Get API keys
+
+Sign up at [cloud.dtelecom.org](https://cloud.dtelecom.org) and grab your **API Key** and **API Secret**.
+
+### 2. Clone and install
+
+```bash
+git clone https://github.com/dTelecom/dtelecom-meet.git
+cd dtelecom-meet
+npm install
+```
+
+### 3. Configure environment
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local`:
+
+```env
+API_KEY=<your-api-key>
+API_SECRET=<your-api-secret>
+```
+
+### 4. Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Webhooks locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Webhooks enable live participant counts on the pre-join screen. On Vercel this works automatically. For local development, dTelecom SFU nodes can't reach `localhost`, so use [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/create-local-tunnel/) to create a tunnel:
 
-## Learn More
+```bash
+brew install cloudflared
+npm run tunnel
+```
 
-To learn more about Next.js, take a look at the following resources:
+Set the printed URL as `WEBHOOK_URL` in `.env.local` and restart the dev server:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+WEBHOOK_URL=https://random-words.trycloudflare.com/api/webhook
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+```
+app/
+  page.tsx                        # Home — enter room name and identity
+  prejoin/page.tsx                # Camera/mic preview + participant count
+  room/[roomName]/page.tsx        # The video conference
+  api/
+    join/route.ts                 # Create token + resolve nearest SFU node
+    webhook/route.ts              # Receive events from SFU nodes
+    room-count/route.ts           # GET participant count for a room
+    create-room/route.ts          # Create room (host)
+    kick/route.ts                 # Remove participant (host)
+    mute/route.ts                 # Mute participant (host)
+components/
+  ConferenceRoom.tsx              # Grid layout + sidebar panels
+  CustomControlBar.tsx            # Media controls + share/chat/participants toggles
+  ParticipantListPanel.tsx        # Participant list with host actions
+  ChatPanel.tsx                   # In-room chat
+  ConnectionStateOverlay.tsx      # Reconnecting/disconnected overlay
+lib/
+  api.ts                          # Client-side fetch helpers
+  types.ts                        # Shared types (Role, RoomMetadata)
+  room-service.ts                 # Server-side RoomServiceClient
+  participant-count.ts            # In-memory webhook counter
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Documentation
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [dTelecom Docs](https://docs.dtelecom.org) — full platform documentation
+- [Conference App Guide](https://docs.dtelecom.org/guides/conference-app) — step-by-step tutorial
+- [Conference App Plan](https://github.com/dTelecom/docs/blob/main/CONFERENCE_APP_PLAN.md) — architecture blueprint
+
+## License
+
+MIT
