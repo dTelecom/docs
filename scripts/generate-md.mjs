@@ -27,6 +27,7 @@ const pages = [
   { src: "guides/room/data.mdx", out: "guides/room/data.md" },
   { src: "references/client-sdks.md", out: "references/client-sdks.md" },
   { src: "references/server-sdks.md", out: "references/server-sdks.md" },
+  { src: "llm-resources/index.mdx", out: "llm-resources.md" },
 ];
 
 function stripMdx(content) {
@@ -77,6 +78,12 @@ function stripMdx(content) {
     result.push(line);
   }
   content = result.join("\n");
+
+  // Convert <a href="...">text</a> to [text](url)
+  content = content.replace(/<a\s+href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g, "[$2]($1)");
+
+  // Convert <code>text</code> to `text`
+  content = content.replace(/<code>(.*?)<\/code>/g, "`$1`");
 
   // Remove any remaining JSX-like tags that aren't standard markdown
   content = content.replace(/<div\s+className="[^"]*">/g, "");
