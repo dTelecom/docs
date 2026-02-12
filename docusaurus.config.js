@@ -6,7 +6,11 @@ module.exports = {
   url: 'https://docs.dtelecom.org/',
   baseUrl: '/',
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
+  },
   favicon: 'img/favicon.png',
   organizationName: 'dTelecom',
   projectName: 'docs',

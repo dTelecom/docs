@@ -1,56 +1,124 @@
+/**
+ * dTelecom Prism theme (CJS)
+ *
+ * Brand palette (from variables.css):
+ *   --lk-dark-blue:  #00153C  (code block bg)
+ *   --lk-green:      #6EE2E2  (cyan accent)
+ *   --lk-blue:       #5A8BFF  (blue accent)
+ *   --lk-white:      #FFFFFF
+ */
+
 'use strict';
 
 var theme = {
   plain: {
-    background: "#00153C",
-    color: "#ffffff",
+    backgroundColor: "#00153C",
+    color: "#E1E4E8",
   },
 
   styles: [
     {
       types: ["comment", "block-comment", "prolog", "doctype", "cdata"],
       style: {
-        color: "#93a1a1",
+        color: "#6A7A8B",
+        fontStyle: "italic",
       },
     },
     {
       types: ["punctuation"],
       style: {
-        color: "#999999",
+        color: "#A0AEC0",
+      },
+    },
+    {
+      types: ["namespace"],
+      style: {
+        opacity: "0.8",
+      },
+    },
+    {
+      types: ["tag", "operator", "number"],
+      style: {
+        color: "#9F83FF",
+      },
+    },
+    {
+      types: ["property", "function"],
+      style: {
+        color: "#6EE2E2",
+      },
+    },
+    {
+      types: ["tag-id", "selector", "atrule-id"],
+      style: {
+        color: "#FFFFFF",
+      },
+    },
+    {
+      types: ["attr-name"],
+      style: {
+        color: "#6EE2E2",
       },
     },
     {
       types: [
-        "namespace",
-        "unit",
-        "hexcode",
+        "string",
+        "char",
+        "attr-value",
+        "regex",
+        "template-string",
+        "template-punctuation",
       ],
       style: {
-        opacity: "0.7",
+        color: "#5A8BFF",
       },
     },
     {
-      types: ["atrule", "attr-value", "keyword"],
+      types: ["boolean", "constant", "symbol"],
       style: {
-        color: "#d340d0",
+        color: "#9F83FF",
       },
     },
     {
-      types: ["function"],
+      types: ["keyword", "atrule"],
       style: {
-        color: "#85EFE3",
-      },
-    },
-    { 
-      types: ["method"],
-      style: {
-        color: "#8DF253",
+        color: "#D471E8",
       },
     },
     {
-      types: ["regex", "important", "variable"],
+      types: ["variable", "parameter"],
       style: {
-        color: "#ee9900",
+        color: "#E1E4E8",
+      },
+    },
+    {
+      types: ["deleted"],
+      style: {
+        color: "#FF6B6B",
+      },
+    },
+    {
+      types: ["inserted"],
+      style: {
+        color: "#6EE2E2",
+      },
+    },
+    {
+      types: ["changed"],
+      style: {
+        color: "#5A8BFF",
+      },
+    },
+    {
+      types: ["class-name", "maybe-class-name"],
+      style: {
+        color: "#6EE2E2",
+      },
+    },
+    {
+      types: ["builtin"],
+      style: {
+        color: "#5A8BFF",
       },
     },
     {
@@ -63,31 +131,6 @@ var theme = {
       types: ["italic"],
       style: {
         fontStyle: "italic",
-      },
-    },
-    { 
-      types: ["entity"],
-      style: {
-        cursor: "help",
-      }
-    },
-    {
-      types: ["tag", "boolean", "number", "constant", "symbol", "deleted"],
-      style: {
-        color: "#9F83FF",
-      },
-    },
-    {
-      types: ["selector", "attr-name", "string", "char", "builtin", "inserted"],
-      style: {
-        color: "#5A8BFF",
-      },
-    },
-    {
-      types: ["operator", "entity", "url"],
-      style: {
-        color: "#a67f59",
-        background: "transparent",
       },
     },
   ],
