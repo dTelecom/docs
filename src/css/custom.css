@@ -13,8 +13,8 @@ body {
 }
 
 .ai-banner {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.1), rgba(139, 92, 246, 0.1));
-  border: 1px solid rgba(56, 189, 248, 0.25);
+  background: linear-gradient(135deg, rgba(20, 241, 149, 0.1), rgba(90, 139, 255, 0.1));
+  border: 1px solid rgba(20, 241, 149, 0.25);
   border-radius: 8px;
   padding: 0.875rem 1.25rem;
   margin-bottom: 1.5rem;
@@ -23,8 +23,8 @@ body {
 }
 
 .ai-banner code {
-  background: rgba(56, 189, 248, 0.1);
-  border-color: rgba(56, 189, 248, 0.2);
+  background: rgba(20, 241, 149, 0.1);
+  border-color: rgba(20, 241, 149, 0.2);
   font-size: 0.85em;
 }
 

@@ -3,7 +3,7 @@
  *
  * Brand palette (from variables.css):
  *   --lk-dark-blue:  #00153C  (code block bg)
- *   --lk-green:      #6EE2E2  (cyan accent)
+ *   --lk-green:      #14F195  (dTelecom green)
  *   --lk-blue:       #5A8BFF  (blue accent)
  *   --lk-white:      #FFFFFF
  */
@@ -43,7 +43,7 @@ var theme = {
     {
       types: ["property", "function"],
       style: {
-        color: "#6EE2E2",
+        color: "#14F195",
       },
     },
     {
@@ -55,7 +55,7 @@ var theme = {
     {
       types: ["attr-name"],
       style: {
-        color: "#6EE2E2",
+        color: "#14F195",
       },
     },
     {
@@ -98,7 +98,7 @@ var theme = {
     {
       types: ["inserted"],
       style: {
-        color: "#6EE2E2",
+        color: "#14F195",
       },
     },
     {
@@ -110,7 +110,7 @@ var theme = {
     {
       types: ["class-name", "maybe-class-name"],
       style: {
-        color: "#6EE2E2",
+        color: "#14F195",
       },
     },
     {
