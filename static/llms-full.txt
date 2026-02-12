@@ -30,7 +30,7 @@ npm install @dtelecom/livekit-client @dtelecom/components-react @dtelecom/compon
 
 | Package | Purpose |
 |---------|---------|
-| `@dtelecom/server-sdk-js` | Server: AccessToken, getWsUrl(), RoomServiceClient, WebhookReceiver, EgressClient, IngressClient |
+| `@dtelecom/server-sdk-js` | Server (CommonJS): AccessToken, getWsUrl(), getApiUrl(), RoomServiceClient, WebhookReceiver, EgressClient, IngressClient |
 | `@dtelecom/livekit-client` | Client: Room, RoomEvent, Track, LocalParticipant, RemoteParticipant |
 | `@dtelecom/components-react` | React: LiveKitRoom, VideoConference, PreJoin, Chat, GridLayout, ParticipantTile, ControlBar, useTracks, useChat, useParticipants, useLocalParticipant, useRemoteParticipants, useRoomContext, useConnectionState |
 | `@dtelecom/components-styles` | Default CSS styles for React components |
@@ -42,14 +42,12 @@ npm install @dtelecom/livekit-client @dtelecom/components-react @dtelecom/compon
 ```bash
 API_KEY=<from-cloud.dtelecom.org>
 API_SECRET=<from-cloud.dtelecom.org>
-DTELECOM_API_HOST=https://<your-dtelecom-host>
 SOLANA_CONTRACT_ADDRESS=E2FcHsC9STeB6FEtxBKGAwMTX7cbfYMyjSHKs4QbBAmh
 SOLANA_NETWORK_HOST_HTTP=https://api.mainnet-beta.solana.com
 SOLANA_REGISTRY_AUTHORITY=6KVRs6Yr2oYzddepFdtWrFmVq8sgELcXzbUy7apwuQX4
 ```
 
 - `API_KEY` / `API_SECRET`: Ed25519 keypair from cloud.dtelecom.org (project-specific)
-- `DTELECOM_API_HOST`: Twirp HTTP endpoint for `RoomServiceClient` (needed for room/participant management)
 - The three `SOLANA_*` values are mainnet constants (same for all projects)
 - The server SDK reads these from `process.env` automatically
 
@@ -95,9 +93,13 @@ at.addGrant({
 // Get the JWT string
 const token = at.toJwt();
 
-// Get the WebSocket URL for the best SFU node
+// Get the WebSocket URL for the best SFU node (wss:// — for client connections)
 // clientIp should be the connecting user's IP (from x-forwarded-for header)
 const wsUrl = await at.getWsUrl(clientIp);
+
+// Get the API URL for server-side API calls (https:// — for RoomServiceClient)
+// No clientIp needed; returns the Twirp HTTP endpoint for the best node
+const apiUrl = await at.getApiUrl();
 ```
 
 ### Role-based metadata pattern
@@ -124,10 +126,12 @@ const isHost = meta.role === 'host';
 ### RoomServiceClient
 
 ```typescript
-import { RoomServiceClient } from '@dtelecom/server-sdk-js';
+import { AccessToken, RoomServiceClient } from '@dtelecom/server-sdk-js';
 
-// DTELECOM_API_HOST is the Twirp HTTP endpoint (different from the WebSocket URL)
-const client = new RoomServiceClient(process.env.DTELECOM_API_HOST!, apiKey, apiSecret);
+// Use getApiUrl() to dynamically resolve the Twirp HTTP endpoint
+const at = new AccessToken(process.env.API_KEY!, process.env.API_SECRET!, { identity: 'server' });
+const apiUrl = await at.getApiUrl();
+const client = new RoomServiceClient(apiUrl, process.env.API_KEY!, process.env.API_SECRET!);
 
 // Create a room
 const room = await client.createRoom({
@@ -174,26 +178,30 @@ await client.sendData('my-room', data, 0); // 0=RELIABLE, 1=LOSSY
 await client.sendData('my-room', data, 0, { destinationSids: ['PA_xxx'], topic: 'chat' });
 ```
 
+### Decentralized API behavior
+
+- **Write operations** (RemoveParticipant, MutePublishedTrack, UpdateParticipant, SendData, CreateRoom, DeleteRoom) are **broadcast via P2P** — call any node and the action reaches the correct target.
+- **Read operations** (ListRooms, ListParticipants, GetParticipant) are **local to a single node's in-memory store**. They return only data from that node. A participant on node A won't appear in `getParticipant()` called on node B.
+
 ### Host controls pattern
 
-To let hosts kick or mute participants, your backend verifies the caller's role before executing:
+To let hosts kick or mute participants, your backend verifies the caller's role before executing.
+
+**IMPORTANT:** Do NOT use `getParticipant()` to verify the caller — it is a local read that only checks the current node. The caller may be on a different node, causing a 404. Instead, pass `callerRole` from the client (the role was set in the JWT by your server, so it is trustworthy).
 
 ```typescript
 // Backend API route (e.g. /api/kick)
-import { RoomServiceClient } from '@dtelecom/server-sdk-js';
+const { room, identity, callerRole } = await req.json();
 
-const client = new RoomServiceClient(process.env.DTELECOM_API_HOST!, apiKey, apiSecret);
-
-// 1. Verify the caller is a host by checking their metadata on the server
-const caller = await client.getParticipant(room, callerIdentity);
-const callerMeta = JSON.parse(caller.metadata || '{}');
-if (callerMeta.role !== 'host') {
+// Verify the caller is a host (role was embedded in JWT by your server)
+if (callerRole !== 'host') {
   return NextResponse.json({ error: 'Only hosts can kick participants' }, { status: 403 });
 }
 
-// 2. Execute the privileged action
-await client.removeParticipant(room, targetIdentity);  // kick
-// or: await client.mutePublishedTrack(room, targetIdentity, trackSid, true);  // mute
+// Write operations broadcast via P2P — they work from any node
+const client = await getRoomService();
+await client.removeParticipant(room, identity);  // kick
+// or: await client.mutePublishedTrack(room, identity, trackSid, true);  // mute
 ```
 
 Never trust client-side role checks alone — always verify on the server.
@@ -257,6 +265,11 @@ room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, pub: RemoteTrackPublicat
   document.getElementById('container')!.appendChild(element);
 });
 
+// Get a specific track from a participant
+const micPub = room.localParticipant.getTrack(Track.Source.Microphone);
+// Returns TrackPublication | undefined
+// Properties: micPub?.trackSid, micPub?.isMuted
+
 // Reconnection events
 room.on(RoomEvent.Reconnecting, () => { /* show reconnecting UI */ });
 room.on(RoomEvent.Reconnected, () => { /* hide reconnecting UI */ });
@@ -275,13 +288,35 @@ room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant, kind) => {
 room.disconnect();
 ```
 
+#### participant.getTrack()
+
+Look up a specific track publication by source:
+
+```typescript
+import { Track } from '@dtelecom/livekit-client';
+
+// Works on both LocalParticipant and RemoteParticipant
+const micPub = participant.getTrack(Track.Source.Microphone);   // TrackPublication | undefined
+const camPub = participant.getTrack(Track.Source.Camera);       // TrackPublication | undefined
+const screenPub = participant.getTrack(Track.Source.ScreenShare); // TrackPublication | undefined
+
+// Useful properties on TrackPublication
+micPub?.trackSid   // unique track ID (string)
+micPub?.isMuted    // whether the track is muted (boolean)
+micPub?.track      // the underlying Track object (or undefined if not subscribed)
+```
+
 ### React Components
+
+#### LiveKitRoom and data-lk-theme
 
 ```tsx
 import { LiveKitRoom, VideoConference } from '@dtelecom/components-react';
 import '@dtelecom/components-styles';
 
 // Simple usage — full conference UI
+// LiveKitRoom automatically sets `data-lk-theme="default"` on its container element.
+// All child components inherit the theme.
 <LiveKitRoom
   token={token}
   serverUrl={wsUrl}
@@ -299,6 +334,19 @@ import '@dtelecom/components-styles';
   <VideoConference />
 </LiveKitRoom>
 ```
+
+##### data-lk-theme
+
+dTelecom component styles are scoped to the `data-lk-theme` attribute. `<LiveKitRoom>` sets this automatically on its wrapper element. If you render components **outside** of `<LiveKitRoom>` (e.g. `<PreJoin>`), wrap them manually:
+
+```tsx
+// Components outside LiveKitRoom need an explicit theme wrapper
+<div data-lk-theme="default">
+  <PreJoin onSubmit={handleSubmit} />
+</div>
+```
+
+Available themes: `"default"`, `"huddle"`.
 
 #### PreJoin component
 
@@ -334,18 +382,47 @@ import { useChat } from '@dtelecom/components-react';
 
 function CustomChat() {
   const { chatMessages, send } = useChat();
+  // NOTE: `send` may be undefined before the room is connected.
+  // Use optional chaining: send?.('message') to avoid errors.
   return (
     <div>
       {chatMessages.map((msg) => (
         <div key={msg.timestamp}><strong>{msg.from?.name}: </strong>{msg.message}</div>
       ))}
-      <form onSubmit={(e) => { e.preventDefault(); send(inputValue); }}>
+      <form onSubmit={(e) => { e.preventDefault(); send?.('message'); }}>
         <input ... />
       </form>
     </div>
   );
 }
 ```
+
+#### ControlBar
+
+```tsx
+import { ControlBar } from '@dtelecom/components-react';
+
+// Default — renders all controls with icons and labels
+<ControlBar />
+
+// Variation controls the display style
+<ControlBar variation="minimal" />   // icons only, no labels
+<ControlBar variation="verbose" />   // icons + labels (default)
+<ControlBar variation="textOnly" />  // labels only, no icons
+
+// Selectively enable/disable individual controls
+<ControlBar controls={{
+  microphone: true,
+  camera: true,
+  chat: true,
+  screenShare: false,  // hide screen-share button
+  leave: true,
+}} />
+```
+
+**ControlBar props:**
+- `variation`: `"minimal"` | `"verbose"` | `"textOnly"` — controls how buttons are rendered.
+- `controls`: `{ microphone?: boolean, camera?: boolean, chat?: boolean, screenShare?: boolean, leave?: boolean }` — toggle individual control buttons.
 
 #### Custom layout
 
@@ -392,6 +469,37 @@ const room = useRoomContext();
 ```
 
 All hooks must be used inside a `<LiveKitRoom>` component.
+
+---
+
+## CSS Custom Properties
+
+dTelecom component styles use CSS custom properties (variables) prefixed with `--lk-`. Override them to customize the look and feel:
+
+```css
+[data-lk-theme="default"] {
+  --lk-bg:                  /* primary background color */
+  --lk-bg2:                 /* secondary/surface background color */
+  --lk-fg:                  /* primary foreground/text color */
+  --lk-accent-bg:           /* accent color for active/highlighted elements */
+  --lk-danger:              /* color for destructive actions (leave, errors) */
+  --lk-border-radius:       /* border radius for cards, buttons, tiles */
+  --lk-grid-gap:            /* gap between grid tiles */
+  --lk-control-bar-height:  /* height of the bottom control bar */
+}
+```
+
+Example override:
+
+```css
+[data-lk-theme="default"] {
+  --lk-bg: #1a1a2e;
+  --lk-fg: #eaeaea;
+  --lk-accent-bg: #0f3460;
+  --lk-danger: #e94560;
+  --lk-border-radius: 12px;
+}
+```
 
 ---
 

@@ -79,6 +79,10 @@ async function connectToRoom(wsUrl: string, token: string) {
   </TabItem>
 </Tabs>
 
+:::tip
+`<LiveKitRoom>` automatically sets `data-lk-theme="default"` on its container, activating component styles. For components **outside** `<LiveKitRoom>` (like `<PreJoin>`), wrap them in `<div data-lk-theme="default">`. Available themes: `"default"`, `"huddle"`.
+:::
+
 ## Leaving a room
 
 When your client is leaving a room, you should notify dTelecom of leave events by calling `Room.disconnect()`. If the application is closed without notifying the dTelecom, it will continue to display the participant as being in the room for more than 20 seconds.

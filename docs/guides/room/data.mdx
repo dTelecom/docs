@@ -37,16 +37,20 @@ function CustomChat() {
       ))}
       <form onSubmit={(e) => {
         e.preventDefault();
-        send(input);
+        send?.(input);
         setInput('');
       }}>
         <input value={input} onChange={(e) => setInput(e.target.value)} />
-        <button type="submit">Send</button>
+        <button type="submit" disabled={!send}>Send</button>
       </form>
     </div>
   );
 }
 ```
+
+:::note
+The `send` function from `useChat` may be `undefined` before the room connection is established. Always use optional chaining (`send?.('message')`) or check for `send` before calling it.
+:::
 
 Both `<Chat>` and `useChat` must be used inside a `<LiveKitRoom>` component.
 

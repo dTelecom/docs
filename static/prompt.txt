@@ -33,6 +33,7 @@ Component names like `LiveKitRoom` and package names like `@dtelecom/livekit-cli
 - Include proper error handling
 - Never hardcode API keys or secrets into code — always use environment variables
 - Never hardcode a WebSocket server URL — always obtain it from `getWsUrl()`
+- Never hardcode an API host URL — always obtain it from `getApiUrl()`
 
 </code_standards>
 
@@ -52,18 +53,18 @@ These rules are non-negotiable. Violating them will produce broken code.
    ```
    API_KEY=<from-cloud.dtelecom.org>
    API_SECRET=<from-cloud.dtelecom.org>
-   DTELECOM_API_HOST=https://<your-dtelecom-host>
    SOLANA_CONTRACT_ADDRESS=E2FcHsC9STeB6FEtxBKGAwMTX7cbfYMyjSHKs4QbBAmh
    SOLANA_NETWORK_HOST_HTTP=https://api.mainnet-beta.solana.com
    SOLANA_REGISTRY_AUTHORITY=6KVRs6Yr2oYzddepFdtWrFmVq8sgELcXzbUy7apwuQX4
    ```
-   `DTELECOM_API_HOST` is the Twirp HTTP endpoint for `RoomServiceClient` (needed for room management, host controls).
 
 4. Token creation and `getWsUrl()` MUST happen server-side. Never expose API_KEY or API_SECRET to the client. The server returns `{ token, wsUrl }` to the client.
 
 5. ALWAYS pass the real client IP to `getWsUrl()`. Extract it from the `x-forwarded-for` header. This is used for geographic node selection — using a wrong IP degrades latency.
 
 6. JWT signing is Ed25519, not HMAC-SHA256. The API Key is a Solana Ed25519 public key; the API Secret is the corresponding private key. The server SDK handles this automatically — you do not need to implement signing yourself.
+
+7. NEVER hardcode an API host URL. Use `getApiUrl()` to obtain the `https://` endpoint for server-side API clients (RoomServiceClient, EgressClient, IngressClient).
 
 </critical_rules>
 
@@ -85,14 +86,18 @@ This flow is mandatory. There are no shortcuts.
 
 <packages>
 
-## Server SDK: @dtelecom/server-sdk-js
+## Server SDK: @dtelecom/server-sdk-js (CommonJS)
 
 ```bash
 npm install @dtelecom/server-sdk-js
 ```
 
+The server SDK publishes CommonJS output. It works with all Node.js runtimes and bundlers (Next.js, Webpack, etc.) without ESM interop issues.
+
 Exported classes:
-- `AccessToken` — Create JWT tokens. Methods: `.addGrant()`, `.toJwt()`, `.getWsUrl(clientIp)`
+- `AccessToken` — Create JWT tokens. Methods: `.addGrant()`, `.toJwt()`, `.getWsUrl(clientIp)`, `.getApiUrl()`
+  - `getWsUrl(clientIp)` — Returns a `wss://` WebSocket URL for client connections. Queries the Solana blockchain to discover the optimal SFU node based on the client's IP for geographic routing.
+  - `getApiUrl()` — Returns an `https://` URL for server-side API calls (RoomServiceClient, EgressClient, IngressClient). Use this instead of hardcoding an API host.
 - `RoomServiceClient` — Manage rooms/participants: createRoom, listRooms, deleteRoom, listParticipants, getParticipant, updateParticipant, removeParticipant, updateRoomMetadata, mutePublishedTrack, updateSubscriptions, sendData
 - `WebhookReceiver` — Validate and decode webhook events
 - `EgressClient` — Recording/streaming management
@@ -110,6 +115,7 @@ Key exports:
 - `Track` — Track.Source.Camera, Track.Source.Microphone, Track.Source.ScreenShare, Track.Kind.Video, Track.Kind.Audio
 - `LocalParticipant` — Methods: setCameraEnabled, setMicrophoneEnabled, setScreenShareEnabled, publishTrack, publishData
 - `RemoteParticipant`, `RemoteTrack`, `RemoteTrackPublication`
+- `Participant` — Base class. Method: `participant.getTrack(source)` returns `TrackPublication | undefined`. Example: `participant.getTrack(Track.Source.Microphone)`. Properties on TrackPublication: `.trackSid`, `.isMuted`.
 - `DataPacket_Kind` — RELIABLE, LOSSY
 - `VideoPresets` — hd, fhd, qhd
 - `ConnectionState` — Connected, Reconnecting, Disconnected
@@ -123,17 +129,19 @@ npm install @dtelecom/components-react @dtelecom/components-styles
 ```
 
 Key exports:
-- `LiveKitRoom` — Root component. Props: `token`, `serverUrl`, `connect`, `audio`, `video`, `onConnected`, `onDisconnected`, `onError`, `onMediaDeviceFailure`
+- `LiveKitRoom` — Root component. Props: `token`, `serverUrl`, `connect`, `audio`, `video`, `onConnected`, `onDisconnected`, `onError`, `onMediaDeviceFailure`. Automatically sets `data-lk-theme` on its container.
 - `VideoConference` — Complete pre-built conference UI with video tiles, controls, screen sharing
-- `PreJoin` — Pre-join page with camera/mic preview and device selection. Props: `onSubmit`, `onError`, `defaults`
+- `PreJoin` — Pre-join page with camera/mic preview and device selection. Props: `onSubmit`, `onError`, `defaults`. Note: PreJoin renders outside `<LiveKitRoom>`, so wrap it in `<div data-lk-theme="default">` for proper styling.
 - `LocalUserChoices` — Interface returned by PreJoin onSubmit: `{ username, videoEnabled, audioEnabled, videoDeviceId, audioDeviceId }`
 - `Chat` — Pre-built chat UI (requires `canPublishData: true` in token grant)
 - `GridLayout` — Grid layout for participant tiles
 - `ParticipantTile` — Single participant video/audio tile (auto-shows name placeholder when camera is off)
-- `ControlBar` — Mic, camera, screen share, leave buttons
+- `ControlBar` — Mic, camera, screen share, leave buttons. Props:
+  - `variation`: `"minimal" | "verbose" | "textOnly"` — controls button label display
+  - `controls`: `{ microphone?: boolean, camera?: boolean, chat?: boolean, screenShare?: boolean, leave?: boolean }` — show/hide individual controls
 - `RoomAudioRenderer` — Renders all audio tracks (required for hearing remote participants)
 - `useTracks` — Hook to get tracks by source
-- `useChat` — Hook for custom chat UI: `{ chatMessages, send }`
+- `useChat` — Hook for custom chat UI: `{ chatMessages, send }`. Note: `send` may be `undefined` before the room connection is established. Use optional chaining: `send?.('message')`.
 - `useParticipants` — Hook to get all participants (local + remote)
 - `useLocalParticipant` — Hook to get the local participant: `{ localParticipant }`
 - `useRemoteParticipants` — Hook to get only remote participants
@@ -143,6 +151,42 @@ Key exports:
 Always import styles when using React components:
 ```typescript
 import '@dtelecom/components-styles';
+```
+
+## Theming: data-lk-theme
+
+`<LiveKitRoom>` automatically applies the `data-lk-theme` attribute to its container. Components rendered outside `<LiveKitRoom>` (e.g., `<PreJoin>`) must be manually wrapped:
+
+```tsx
+<div data-lk-theme="default">
+  <PreJoin onSubmit={handleSubmit} />
+</div>
+```
+
+Available themes: `"default"`, `"huddle"`.
+
+## CSS Custom Properties
+
+Override these CSS custom properties to customize the look and feel:
+
+| Property | Description |
+|----------|-------------|
+| `--lk-bg` | Primary background color |
+| `--lk-bg2` | Secondary background color |
+| `--lk-fg` | Foreground / text color |
+| `--lk-accent-bg` | Accent background (buttons, highlights) |
+| `--lk-danger` | Danger/error color (leave button, errors) |
+| `--lk-border-radius` | Border radius for UI elements |
+| `--lk-grid-gap` | Gap between grid tiles |
+| `--lk-control-bar-height` | Height of the control bar |
+
+Example:
+```css
+[data-lk-theme="default"] {
+  --lk-bg: #1a1a2e;
+  --lk-accent-bg: #e94560;
+  --lk-border-radius: 8px;
+}
 ```
 
 </packages>
@@ -398,11 +442,13 @@ export default function PreJoinPage() {
   }
 
   return (
-    <PreJoin
-      onSubmit={handleSubmit}
-      onError={(err) => console.error(err.message)}
-      defaults={{ username: '', videoEnabled: true, audioEnabled: true }}
-    />
+    <div data-lk-theme="default">
+      <PreJoin
+        onSubmit={handleSubmit}
+        onError={(err) => console.error(err.message)}
+        defaults={{ username: '', videoEnabled: true, audioEnabled: true }}
+      />
+    </div>
   );
 }
 ```
@@ -432,7 +478,7 @@ function CustomChat() {
       {chatMessages.map((msg) => (
         <div key={msg.timestamp}><strong>{msg.from?.name}: </strong>{msg.message}</div>
       ))}
-      <form onSubmit={(e) => { e.preventDefault(); send(inputValue); }}>
+      <form onSubmit={(e) => { e.preventDefault(); send?.('message'); }}>
         <input ... />
       </form>
     </div>
@@ -440,11 +486,15 @@ function CustomChat() {
 }
 ```
 
+Note: `send` from `useChat()` may be `undefined` before the room connection is established. Always use optional chaining: `send?.('msg')`.
+
 </reference_example>
 
 <reference_example id="host-controls-pattern">
 
-For host controls (kick/mute), embed role in token metadata and verify server-side:
+For host controls (kick/mute), embed role in token metadata and verify server-side.
+
+IMPORTANT: Do NOT use `getParticipant()` to verify the caller — it is a local read that only checks the current node's in-memory store. In dTelecom's decentralized network, the caller may be on a different node, causing a 404. Instead, pass `callerRole` from the client (the role was set in the JWT by your own server, so it is trustworthy).
 
 ```typescript
 // 1. Server: embed role in token metadata
@@ -452,24 +502,28 @@ const metadata = JSON.stringify({ role: 'host' }); // or 'guest'
 const at = new AccessToken(apiKey, apiSecret, { identity, name, metadata });
 at.addGrant({ roomJoin: true, room, canPublish: true, canSubscribe: true, canPublishData: true });
 
-// 2. Client: read role from metadata (for UI only)
+// 2. Client: read role from metadata (for UI only), pass callerRole to backend
 import { useLocalParticipant } from '@dtelecom/components-react';
 const { localParticipant } = useLocalParticipant();
 const meta = JSON.parse(localParticipant.metadata || '{}');
 const isHost = meta.role === 'host';
+// When calling kick/mute API, pass callerRole: meta.role
 
-// 3. Backend: verify role before privileged actions
-import { RoomServiceClient } from '@dtelecom/server-sdk-js';
-const client = new RoomServiceClient(process.env.DTELECOM_API_HOST!, apiKey, apiSecret);
-
-const caller = await client.getParticipant(room, callerIdentity);
-const callerMeta = JSON.parse(caller.metadata || '{}');
-if (callerMeta.role !== 'host') {
+// 3. Backend: verify callerRole before privileged actions
+const { room, identity, callerRole } = await req.json();
+if (callerRole !== 'host') {
   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 }
-await client.removeParticipant(room, targetIdentity);  // kick
-// or: await client.mutePublishedTrack(room, targetIdentity, trackSid, true);  // mute
+// Write operations (removeParticipant, mutePublishedTrack) broadcast via P2P — they work from any node
+const client = await getRoomService();
+await client.removeParticipant(room, identity);  // kick
+// or: await client.mutePublishedTrack(room, identity, trackSid, true);  // mute
 ```
+
+Key architecture notes:
+- Write operations (RemoveParticipant, MutePublishedTrack, SendData) broadcast via P2P — call any node.
+- Read operations (ListRooms, ListParticipants, GetParticipant) are LOCAL to a single node's in-memory store.
+- Never rely on `getParticipant()` for cross-node verification.
 
 </reference_example>
 
@@ -486,9 +540,12 @@ const adminToken = new AccessToken(process.env.API_KEY!, process.env.API_SECRET!
 });
 adminToken.addGrant({ roomCreate: true, roomAdmin: true });
 
+// Obtain the API URL dynamically — do not hardcode
+const apiUrl = await adminToken.getApiUrl();
+
 // Initialize room service client
 const roomService = new RoomServiceClient(
-  'https://your-dtelecom-host',
+  apiUrl,
   process.env.API_KEY!,
   process.env.API_SECRET!
 );
@@ -576,5 +633,6 @@ Avoid these frequent errors:
 8. WRONG: Passing `'127.0.0.1'` as clientIp in production → Extract real IP from `x-forwarded-for` for proper geographic node selection.
 9. WRONG: Building a custom chat from scratch with `publishData` → Use the built-in `<Chat>` component or `useChat` hook from `@dtelecom/components-react`.
 10. WRONG: Calling `RoomServiceClient` from frontend code → Server SDK must only be used server-side (API routes). The frontend should call your API routes, which then call the server SDK.
+11. WRONG: Hardcoding an API host URL for `RoomServiceClient` → Use `getApiUrl()` to dynamically obtain the `https://` endpoint.
 
 </common_mistakes>

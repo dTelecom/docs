@@ -39,6 +39,27 @@ function ParticipantList() {
 
 These hooks must be used inside a `<LiveKitRoom>` component. They automatically update when participants join or leave.
 
+## Getting a specific track
+
+To access a specific track from a participant, use `participant.getTrack()` with a `Track.Source`:
+
+```typescript
+import { Track } from '@dtelecom/livekit-client';
+
+// Get a participant's microphone track
+const micPub = participant.getTrack(Track.Source.Microphone);
+// Returns TrackPublication | undefined
+
+if (micPub) {
+  console.log('Track SID:', micPub.trackSid);
+  console.log('Is muted:', micPub.isMuted);
+}
+
+// Other track sources:
+const cameraPub = participant.getTrack(Track.Source.Camera);
+const screenPub = participant.getTrack(Track.Source.ScreenShare);
+```
+
 ## Track subscription
 
 Receiving tracks from the server starts with a subscription.

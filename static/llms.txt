@@ -2,27 +2,29 @@
 
 > dTelecom is a decentralized WebRTC video conferencing platform. It is a fork of LiveKit with Solana-based node discovery and Ed25519 JWT signing. Build real-time audio/video apps using JavaScript/TypeScript SDKs.
 
-This file provides an index of all documentation. For complete content in a single file, see: /llms-full.txt
+For complete content in a single file: [/llms-full.txt](https://docs.dtelecom.org/llms-full.txt)
+For AI system prompt: [/prompt.txt](https://docs.dtelecom.org/prompt.txt)
+All pages as markdown index: [/docs.md](https://docs.dtelecom.org/docs.md)
 
 ## Docs
 
-- [Home](https://docs.dtelecom.org/): Platform overview, features, and quick React example
-- [Getting Started](https://docs.dtelecom.org/guides/getting-started): Step-by-step guide to build a working video call — API keys, env vars, SDK install, server token + getWsUrl(), client connection
-- [Architecture](https://docs.dtelecom.org/guides/architecture): How dTelecom differs from LiveKit — decentralized SFU nodes, Solana registry, Ed25519 signing, connection flow diagram
-- [Access Tokens](https://docs.dtelecom.org/guides/access-tokens): Creating JWT tokens with Ed25519 signing, room permissions (canPublishData), token expiration, participant metadata, role-based metadata pattern
-- [Server APIs](https://docs.dtelecom.org/guides/server-api): RoomServiceClient API — CreateRoom, ListRooms, DeleteRoom, ListParticipants, GetParticipant, UpdateParticipant, RemoveParticipant, UpdateRoomMetadata, MutePublishedTrack, UpdateSubscriptions, SendData, host controls pattern (kick/mute with role verification)
-- [Webhooks](https://docs.dtelecom.org/guides/webhooks): WebhookReceiver setup, room_started, room_finished, participant_joined, participant_left events
-- [Connection and Callbacks](https://docs.dtelecom.org/guides/room/connect): Connecting to rooms (React + vanilla JS), disconnecting, reconnection handling, error handling (onError, onMediaDeviceFailure)
-- [Publishing Media](https://docs.dtelecom.org/guides/room/publish): Camera, microphone, screen sharing, advanced track management, simulcast
-- [Receiving Media](https://docs.dtelecom.org/guides/room/receive): Listing participants (useParticipants, useRemoteParticipants), track subscription, media playback, speaker detection, selective subscription, simulcast controls
-- [Working with Data](https://docs.dtelecom.org/guides/room/data): Built-in Chat component, useChat hook, participant metadata, data messages (reliable/lossy)
-- [Conference App](https://docs.dtelecom.org/guides/conference-app): Complete Google Meet-style app tutorial — Next.js API route, PreJoin page, React room with LiveKitRoom/VideoConference, Chat, host controls (kick/mute)
-- [Client SDKs](https://docs.dtelecom.org/references/client-sdks): @dtelecom/livekit-client, @dtelecom/components-react, @dtelecom/components-styles — install, packages, LiveKit compatibility
-- [Server SDKs](https://docs.dtelecom.org/references/server-sdks): @dtelecom/server-sdk-js — AccessToken, RoomServiceClient, WebhookReceiver, EgressClient, IngressClient, getWsUrl()
+- [Home](https://docs.dtelecom.org/index.md): Platform overview, features, and quick React example
+- [Getting Started](https://docs.dtelecom.org/guides/getting-started.md): Step-by-step guide to build a working video call — API keys, env vars, SDK install, server token + getWsUrl()/getApiUrl(), client connection
+- [Architecture](https://docs.dtelecom.org/guides/architecture.md): How dTelecom differs from LiveKit — decentralized SFU nodes, Solana registry, Ed25519 signing, connection flow diagram
+- [Access Tokens](https://docs.dtelecom.org/guides/access-tokens.md): Creating JWT tokens with Ed25519 signing, room permissions (canPublishData), token expiration, participant metadata, role-based metadata pattern
+- [Server APIs](https://docs.dtelecom.org/guides/server-api.md): RoomServiceClient API (initialized via getApiUrl()) — CreateRoom, ListRooms, DeleteRoom, ListParticipants, GetParticipant, UpdateParticipant, RemoveParticipant, UpdateRoomMetadata, MutePublishedTrack, UpdateSubscriptions, SendData, host controls pattern (kick/mute with callerRole verification). Note: write ops broadcast via P2P (work from any node), read ops are local to one node's in-memory store.
+- [Webhooks](https://docs.dtelecom.org/guides/webhooks.md): WebhookReceiver setup, room_started, room_finished, participant_joined, participant_left events
+- [Connection and Callbacks](https://docs.dtelecom.org/guides/room/connect.md): Connecting to rooms (React + vanilla JS), disconnecting, reconnection handling, error handling (onError, onMediaDeviceFailure)
+- [Publishing Media](https://docs.dtelecom.org/guides/room/publish.md): Camera, microphone, screen sharing, advanced track management, simulcast
+- [Receiving Media](https://docs.dtelecom.org/guides/room/receive.md): Listing participants (useParticipants, useRemoteParticipants), track subscription, media playback, speaker detection, selective subscription, simulcast controls
+- [Working with Data](https://docs.dtelecom.org/guides/room/data.md): Built-in Chat component, useChat hook, participant metadata, data messages (reliable/lossy)
+- [Conference App](https://docs.dtelecom.org/guides/conference-app.md): Complete Google Meet-style app tutorial — Next.js API route, PreJoin page, React room with LiveKitRoom/VideoConference, Chat, host controls (kick/mute)
+- [Client SDKs](https://docs.dtelecom.org/references/client-sdks.md): @dtelecom/livekit-client, @dtelecom/components-react, @dtelecom/components-styles — install, packages, LiveKit compatibility
+- [Server SDKs](https://docs.dtelecom.org/references/server-sdks.md): @dtelecom/server-sdk-js — AccessToken, RoomServiceClient, WebhookReceiver, EgressClient, IngressClient, getWsUrl(), getApiUrl()
 
 ## Key packages
 
-- `@dtelecom/server-sdk-js` — Server: tokens, getWsUrl(), room management
+- `@dtelecom/server-sdk-js` — Server: tokens, getWsUrl(), getApiUrl(), room management
 - `@dtelecom/livekit-client` — Client: Room, RoomEvent, Track (vanilla JS/TS)
 - `@dtelecom/components-react` — React: LiveKitRoom, VideoConference, PreJoin, Chat, GridLayout, useChat, useParticipants
 - `@dtelecom/components-styles` — CSS styles for React components

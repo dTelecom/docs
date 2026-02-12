@@ -20,6 +20,10 @@ cd my-conference
 npm install @dtelecom/server-sdk-js @dtelecom/livekit-client @dtelecom/components-react @dtelecom/components-styles
 ```
 
+:::note
+Next.js 16+ may ask about the **React Compiler** during project creation. Select **No** for now — the React Compiler is experimental and may cause issues with some dTelecom components.
+:::
+
 Create `.env.local`:
 
 ```bash
@@ -239,6 +243,48 @@ function MyConference() {
       <ControlBar />
     </div>
   );
+}
+```
+
+### ControlBar props
+
+`<ControlBar>` accepts these props for customization:
+
+| Prop | Type | Description |
+|:-----|:-----|:------------|
+| `variation` | `"minimal" \| "verbose" \| "textOnly"` | Display style. `"minimal"` shows icons only, `"verbose"` adds labels, `"textOnly"` hides icons. |
+| `controls` | `object` | Toggle which buttons appear: `{ microphone?: boolean, camera?: boolean, chat?: boolean, screenShare?: boolean, leave?: boolean }` |
+
+```tsx
+<ControlBar variation="verbose" controls={{ chat: false, screenShare: false }} />
+```
+
+### The `data-lk-theme` attribute
+
+`<LiveKitRoom>` automatically sets the `data-lk-theme="default"` attribute on its container, which activates the dTelecom component styles. Components **outside** `<LiveKitRoom>` (like `<PreJoin>`) don't get this automatically — wrap them manually:
+
+```tsx
+<div data-lk-theme="default">
+  <PreJoin onSubmit={handleSubmit} />
+</div>
+```
+
+Available themes: `"default"` (dark), `"huddle"` (compact).
+
+### CSS custom properties
+
+The dTelecom component styles use CSS custom properties (variables) that you can override for theming:
+
+```css
+[data-lk-theme="default"] {
+  --lk-bg: #1a1a2e;          /* primary background */
+  --lk-bg2: #16213e;         /* secondary background (panels, cards) */
+  --lk-fg: #e0e0e0;          /* foreground/text color */
+  --lk-accent-bg: #0f3460;   /* accent background (active buttons) */
+  --lk-danger: #e94560;      /* danger/destructive actions */
+  --lk-border-radius: 8px;   /* global border radius */
+  --lk-grid-gap: 8px;        /* gap between video tiles */
+  --lk-control-bar-height: 56px; /* height of bottom control bar */
 }
 ```
 

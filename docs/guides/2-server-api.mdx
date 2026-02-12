@@ -8,25 +8,31 @@ dTelecom has built-in APIs that lets you to manage rooms and moderate participan
 
 Room APIs are built on top of [Twirp](https://twitchtv.github.io/twirp/docs/intro.html), and differ from a traditional REST interface. Arguments are passed via POSTing JSON body to the endpoints.
 
-Room APIs are fully distributed across multiple nodes. Each instance is capable of fulfilling requests about any room or participant.
+**Write operations** (CreateRoom, RemoveParticipant, MutePublishedTrack, UpdateParticipant, SendData, DeleteRoom) are **broadcast via P2P** across all nodes — you can call any node and the action reaches the correct target.
+
+**Read operations** (ListRooms, ListParticipants, GetParticipant) are **local to a single node's in-memory store**. They return only what that specific node knows about. A participant connected to node A will not appear in `getParticipant()` called on node B.
 
 ## Using the Server SDK
 
-The easiest way to interact with Room APIs is through the `RoomServiceClient` in the server SDK:
+The easiest way to interact with Room APIs is through the `RoomServiceClient` in the server SDK. Use `getApiUrl()` to discover the HTTPS endpoint automatically from the Solana node registry:
 
 ```typescript
-import { RoomServiceClient } from '@dtelecom/server-sdk-js';
+import { AccessToken, RoomServiceClient } from '@dtelecom/server-sdk-js';
+
+// Discover the API URL from the Solana node registry
+const at = new AccessToken(process.env.API_KEY!, process.env.API_SECRET!, { identity: 'server' });
+const apiUrl = await at.getApiUrl();
 
 const client = new RoomServiceClient(
-  process.env.DTELECOM_API_HOST!,  // Twirp HTTP endpoint (e.g. https://your-dtelecom-host)
+  apiUrl,
   process.env.API_KEY!,
   process.env.API_SECRET!
 );
 ```
 
-The first argument is the **Twirp HTTP endpoint** (`DTELECOM_API_HOST`). This is different from the WebSocket URL returned by `getWsUrl()` — the WebSocket URL is for client connections, while the HTTP host is for server-side API calls.
+`getApiUrl()` queries the Solana blockchain to find the optimal node and returns an HTTPS URL (e.g. `https://node-xyz.dtel.network`). This is different from `getWsUrl()` which returns a WebSocket URL for client connections.
 
-Note: For most operations, you'll use the SDK methods shown below rather than calling the HTTP endpoints directly.
+For most operations, you'll use the SDK methods shown below rather than calling the HTTP endpoints directly.
 
 ### Authorization header
 
@@ -71,6 +77,10 @@ console.log('Created room:', room.name, room.sid);
 
 Lists active rooms. Optionally filter by room name(s). Requires `roomCreate` permission.
 
+:::note
+ListRooms is a local read — it only returns rooms hosted on the specific node your API client is connected to. It does not aggregate across the entire network.
+:::
+
 | Parameter | Type | Description |
 | :-------- | :--- | :---------- |
 | names | string[] | optional list of room names to filter by |
@@ -100,6 +110,10 @@ await client.deleteRoom('my-room');
 
 Lists participants in a room. Requires `roomAdmin` permission.
 
+:::note
+ListParticipants is a local read — it only returns participants from the node's in-memory store. Participants on other nodes will not appear.
+:::
+
 | Parameter | Type | Description |
 | :-------- | :--- | :---------- |
 | room | string | name of the room |
@@ -114,6 +128,10 @@ for (const p of participants) {
 ### GetParticipant
 
 Gets information about a specific participant. Requires `roomAdmin` permission.
+
+:::note
+GetParticipant is a local read. If the participant is connected to a different node, this call will return a 404 error. Do not use it to verify a caller's identity before write operations — use the [host controls pattern](#host-controls-pattern) instead.
+:::
 
 | Parameter | Type | Description |
 | :-------- | :--- | :---------- |
@@ -231,34 +249,34 @@ await client.sendData('my-room', data, 0, {
 A common requirement is letting hosts kick or mute other participants. The pattern is:
 
 1. **Token creation** — embed a role in participant metadata (see [Access Tokens](/guides/access-tokens#role-based-metadata-example))
-2. **Frontend** — read the role from metadata to show/hide host controls
+2. **Frontend** — read the role from metadata to show/hide host controls; pass `callerRole` to your backend
 3. **Your backend** — verify the caller's role before calling the server SDK
+
+:::caution Why not use `getParticipant()` to verify the caller?
+Because `getParticipant()` is a **local read** — it only checks the current node's in-memory store. In dTelecom's decentralized network, the caller may be connected to a different node, causing a 404 even though they are in the room. Instead, the client passes its role (set during token creation) and your backend validates it. The role was embedded in the JWT by your own server, so it is trustworthy.
+:::
 
 Here is the full flow:
 
 ### Kick endpoint
 
 ```typescript title="app/api/kick/route.ts"
-import { RoomServiceClient } from '@dtelecom/server-sdk-js';
 import { NextRequest, NextResponse } from 'next/server';
-
-const client = new RoomServiceClient(
-  process.env.DTELECOM_API_HOST!,
-  process.env.API_KEY!,
-  process.env.API_SECRET!
-);
+import { getRoomService } from '@/lib/room-service';
 
 export async function POST(req: NextRequest) {
-  const { room, identity, callerIdentity } = await req.json();
+  const { room, identity, callerRole } = await req.json();
+  if (!room || !identity || !callerRole) {
+    return NextResponse.json({ error: 'room, identity, and callerRole are required' }, { status: 400 });
+  }
 
-  // 1. Verify the caller is a host by checking their metadata on the server
-  const caller = await client.getParticipant(room, callerIdentity);
-  const callerMeta = JSON.parse(caller.metadata || '{}');
-  if (callerMeta.role !== 'host') {
+  // Verify the caller is a host (role was set in token metadata by your server)
+  if (callerRole !== 'host') {
     return NextResponse.json({ error: 'Only hosts can kick participants' }, { status: 403 });
   }
 
-  // 2. Remove the participant
+  // RemoveParticipant is a write operation — it broadcasts via P2P to all nodes
+  const client = await getRoomService();
   await client.removeParticipant(room, identity);
   return NextResponse.json({ success: true });
 }
@@ -267,28 +285,46 @@ export async function POST(req: NextRequest) {
 ### Mute endpoint
 
 ```typescript title="app/api/mute/route.ts"
-import { RoomServiceClient } from '@dtelecom/server-sdk-js';
 import { NextRequest, NextResponse } from 'next/server';
-
-const client = new RoomServiceClient(
-  process.env.DTELECOM_API_HOST!,
-  process.env.API_KEY!,
-  process.env.API_SECRET!
-);
+import { getRoomService } from '@/lib/room-service';
 
 export async function POST(req: NextRequest) {
-  const { room, identity, trackSid, callerIdentity } = await req.json();
+  const { room, identity, trackSid, callerRole } = await req.json();
+  if (!room || !identity || !trackSid || !callerRole) {
+    return NextResponse.json({ error: 'room, identity, trackSid, and callerRole are required' }, { status: 400 });
+  }
 
-  // 1. Verify the caller is a host
-  const caller = await client.getParticipant(room, callerIdentity);
-  const callerMeta = JSON.parse(caller.metadata || '{}');
-  if (callerMeta.role !== 'host') {
+  if (callerRole !== 'host') {
     return NextResponse.json({ error: 'Only hosts can mute participants' }, { status: 403 });
   }
 
-  // 2. Mute the track
+  // MutePublishedTrack is a write operation — it broadcasts via P2P to all nodes
+  const client = await getRoomService();
   await client.mutePublishedTrack(room, identity, trackSid, true);
   return NextResponse.json({ success: true });
+}
+```
+
+### RoomService helper
+
+```typescript title="lib/room-service.ts"
+import { AccessToken, RoomServiceClient } from '@dtelecom/server-sdk-js';
+
+let client: RoomServiceClient | null = null;
+let clientPromise: Promise<RoomServiceClient> | null = null;
+
+export async function getRoomService(): Promise<RoomServiceClient> {
+  if (client) return client;
+  if (clientPromise) return clientPromise;
+
+  clientPromise = (async () => {
+    const at = new AccessToken(process.env.API_KEY!, process.env.API_SECRET!, { identity: 'server' });
+    const apiUrl = await at.getApiUrl();
+    client = new RoomServiceClient(apiUrl, process.env.API_KEY!, process.env.API_SECRET!);
+    return client;
+  })();
+
+  return clientPromise;
 }
 ```
 

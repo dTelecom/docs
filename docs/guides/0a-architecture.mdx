@@ -46,9 +46,8 @@ Your server needs these environment variables:
 | `SOLANA_CONTRACT_ADDRESS` | `E2FcHsC9STeB6FEtxBKGAwMTX7cbfYMyjSHKs4QbBAmh` | Address of the node registry smart contract |
 | `SOLANA_NETWORK_HOST_HTTP` | `https://api.mainnet-beta.solana.com` | Solana RPC endpoint |
 | `SOLANA_REGISTRY_AUTHORITY` | `6KVRs6Yr2oYzddepFdtWrFmVq8sgELcXzbUy7apwuQX4` | Authority key for the registry |
-| `DTELECOM_API_HOST` | `https://<your-dtelecom-host>` | Twirp HTTP endpoint for `RoomServiceClient` (room/participant management) |
 
-The `API_KEY` and `API_SECRET` are project-specific (from the cloud dashboard). The three `SOLANA_*` values are mainnet constants shared across all projects. `DTELECOM_API_HOST` is only needed if you use [Server APIs](/guides/server-api) to manage rooms or moderate participants.
+The `API_KEY` and `API_SECRET` are project-specific (from the cloud dashboard). The three `SOLANA_*` values are mainnet constants shared across all projects. No server host URL is needed — the SDK discovers the optimal node via `getWsUrl()` (for client WebSocket connections) and `getApiUrl()` (for server-side API calls like `RoomServiceClient`).
 
 ## Why LiveKit component names are kept
 
@@ -58,11 +57,23 @@ You'll notice that client components are still named `LiveKitRoom`, and the clie
 2. Replace the hardcoded server URL with the dynamic `wsUrl` from `getWsUrl()`
 3. Use Ed25519 keys from the dTelecom cloud dashboard
 
+## Decentralized API behavior
+
+Because dTelecom runs on multiple independent SFU nodes, server-side API calls behave differently from a centralized system:
+
+- **Write operations** (RemoveParticipant, MutePublishedTrack, UpdateParticipant, SendData) are **broadcast via P2P** across all nodes. You can call any node and the action will reach the correct participant regardless of which node they are connected to.
+- **Read operations** (ListRooms, ListParticipants, GetParticipant) are **local to a single node**. They only return data from that node's in-memory store. If you need to verify a participant exists, note that a different node may host them.
+
+In practice this means:
+- Kick and mute **always work** — call any node and P2P pubsub delivers the action.
+- Listing rooms or participants returns a **partial view** from one node.
+- Do **not** use `getParticipant()` to verify a caller's identity before a write operation — the participant may be on a different node. Instead, pass the caller's role from the client and validate it server-side (see [Host controls pattern](/guides/server-api#host-controls-pattern)).
+
 ## SDK packages
 
 | Package | Install | Purpose |
 |:--------|:--------|:--------|
-| `@dtelecom/server-sdk-js` | `npm i @dtelecom/server-sdk-js` | Server-side: tokens, `getWsUrl()`, room management |
+| `@dtelecom/server-sdk-js` | `npm i @dtelecom/server-sdk-js` | Server-side: tokens, `getWsUrl()`, room management (CommonJS) |
 | `@dtelecom/livekit-client` | `npm i @dtelecom/livekit-client` | Client-side: Room, Track, RoomEvent (vanilla JS/TS) |
 | `@dtelecom/components-react` | `npm i @dtelecom/components-react` | React UI components: LiveKitRoom, VideoConference |
 | `@dtelecom/components-styles` | `npm i @dtelecom/components-styles` | Default styles for React components |
