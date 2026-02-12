@@ -2,6 +2,39 @@
 
 A full-featured Google Meet-style conference app built with Next.js and dTelecom, using `@dtelecom/server-sdk-js@^3.0.3`.
 
+## About dTelecom
+
+dTelecom is a **decentralized real-time communication platform** for video, audio, and data. Instead of centralized servers, it uses a network of independent SFU (Selective Forwarding Unit) nodes registered on the Solana blockchain. Your app discovers the optimal node automatically via the SDK — no fixed server URL needed.
+
+### Documentation & Resources
+
+| Resource | URL |
+|:---------|:----|
+| Full docs (single file, for LLMs) | https://docs.dtelecom.org/llms-full.txt |
+| Docs overview + page index | https://docs.dtelecom.org/llms.txt |
+| LLM system prompt | https://docs.dtelecom.org/prompt.txt |
+| Docs site (HTML) | https://docs.dtelecom.org |
+| API keys / dashboard | https://cloud.dtelecom.org |
+| Server SDK (npm) | https://www.npmjs.com/package/@dtelecom/server-sdk-js |
+| Server SDK (GitHub) | https://github.com/dTelecom/server-sdk-js |
+| Client SDK (npm) | https://www.npmjs.com/package/@dtelecom/livekit-client |
+| React components (npm) | https://www.npmjs.com/package/@dtelecom/components-react |
+| Client SDK (GitHub) | https://github.com/dTelecom/client-sdk-js |
+| React components (GitHub) | https://github.com/dTelecom/components-js |
+
+### SDK Packages
+
+| Package | Purpose |
+|:--------|:--------|
+| `@dtelecom/server-sdk-js` | Server-side: create tokens, get WebSocket/API URLs, manage rooms (CommonJS) |
+| `@dtelecom/livekit-client` | Client-side: connect to rooms, manage tracks (vanilla JS/TS) |
+| `@dtelecom/components-react` | React components: `LiveKitRoom`, `VideoConference`, `PreJoin`, `Chat`, etc. |
+| `@dtelecom/components-styles` | Default CSS styles for the React components |
+
+> **For AI coding assistants:** Paste `https://docs.dtelecom.org/llms-full.txt` into your context for complete API reference, or use `https://docs.dtelecom.org/prompt.txt` as a system prompt.
+
+---
+
 ## File Structure
 
 ```
