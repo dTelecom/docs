@@ -1,6 +1,6 @@
 # Conference App Implementation Plan
 
-A full-featured Google Meet-style conference app built with Next.js and dTelecom. ~20 files, ~800 lines of code.
+A full-featured Google Meet-style conference app built with Next.js and dTelecom, using `@dtelecom/server-sdk-js@^3.0.3`.
 
 ## File Structure
 
@@ -15,8 +15,8 @@ my-conference/
       create-room/route.ts            # Create a room (host only)
       kick/route.ts                   # Remove participant (host only)
       mute/route.ts                   # Mute participant track (host only)
-      participants/route.ts           # List participants in a room
-      rooms/route.ts                  # List active rooms
+      participants/route.ts           # List participants (local-only read)
+      rooms/route.ts                  # List active rooms (local-only read)
   components/
     ConferenceRoom.tsx                # Main room layout (grid + sidebar)
     CustomControlBar.tsx              # Extended control bar with host actions
@@ -27,8 +27,20 @@ my-conference/
   lib/
     types.ts                          # Shared types (Role, RoomMetadata)
     api.ts                            # Client-side fetch helpers
+    room-service.ts                   # Server-side RoomServiceClient (cached getApiUrl())
   .env.local                          # Environment variables
 ```
+
+---
+
+## Architecture Notes
+
+dTelecom runs on multiple independent SFU nodes. This affects how server APIs behave:
+
+- **Write operations** (RemoveParticipant, MutePublishedTrack, UpdateParticipant, SendData, CreateRoom, DeleteRoom) are **broadcast via P2P** across all nodes — call any node and the action reaches the correct target.
+- **Read operations** (ListRooms, ListParticipants, GetParticipant) are **local to a single node's in-memory store**. They return only what that specific node knows about.
+
+**Key implication for host controls:** Do NOT use `getParticipant()` to verify a caller's role before kick/mute. The caller may be on a different node, causing a 404. Instead, pass `callerRole` from the client (the role was embedded in the JWT by your server, so it is trustworthy).
 
 ---
 
@@ -38,11 +50,12 @@ my-conference/
 # .env.local
 API_KEY=<your-api-key-from-cloud.dtelecom.org>
 API_SECRET=<your-api-secret-from-cloud.dtelecom.org>
-DTELECOM_API_HOST=https://<your-dtelecom-host>
 SOLANA_CONTRACT_ADDRESS=E2FcHsC9STeB6FEtxBKGAwMTX7cbfYMyjSHKs4QbBAmh
 SOLANA_NETWORK_HOST_HTTP=https://api.mainnet-beta.solana.com
 SOLANA_REGISTRY_AUTHORITY=6KVRs6Yr2oYzddepFdtWrFmVq8sgELcXzbUy7apwuQX4
 ```
+
+No `DTELECOM_API_HOST` needed — use `getApiUrl()` to discover the API endpoint automatically.
 
 ---
 
@@ -82,22 +95,44 @@ export async function joinRoom(room: string, identity: string, role: string): Pr
   return res.json();
 }
 
-export async function kickParticipant(room: string, identity: string): Promise<void> {
+export async function kickParticipant(room: string, identity: string, callerRole: string): Promise<void> {
   const res = await fetch('/api/kick', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ room, identity }),
+    body: JSON.stringify({ room, identity, callerRole }),
   });
   if (!res.ok) throw new Error((await res.json()).error || 'Failed to kick');
 }
 
-export async function muteParticipant(room: string, identity: string, trackSid: string): Promise<void> {
+export async function muteParticipant(room: string, identity: string, trackSid: string, callerRole: string): Promise<void> {
   const res = await fetch('/api/mute', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ room, identity, trackSid }),
+    body: JSON.stringify({ room, identity, trackSid, callerRole }),
   });
   if (!res.ok) throw new Error((await res.json()).error || 'Failed to mute');
+}
+```
+
+```typescript
+// lib/room-service.ts
+import { AccessToken, RoomServiceClient } from '@dtelecom/server-sdk-js';
+
+let client: RoomServiceClient | null = null;
+let clientPromise: Promise<RoomServiceClient> | null = null;
+
+export async function getRoomService(): Promise<RoomServiceClient> {
+  if (client) return client;
+  if (clientPromise) return clientPromise;
+
+  clientPromise = (async () => {
+    const at = new AccessToken(process.env.API_KEY!, process.env.API_SECRET!, { identity: 'server' });
+    const apiUrl = await at.getApiUrl();
+    client = new RoomServiceClient(apiUrl, process.env.API_KEY!, process.env.API_SECRET!);
+    return client;
+  })();
+
+  return clientPromise;
 }
 ```
 
@@ -150,14 +185,8 @@ export async function POST(req: NextRequest) {
 Creates a room with metadata. Only hosts call this.
 
 ```typescript
-import { RoomServiceClient } from '@dtelecom/server-sdk-js';
 import { NextRequest, NextResponse } from 'next/server';
-
-const roomService = new RoomServiceClient(
-  process.env.DTELECOM_API_HOST!,
-  process.env.API_KEY!,
-  process.env.API_SECRET!
-);
+import { getRoomService } from '@/lib/room-service';
 
 export async function POST(req: NextRequest) {
   const { roomName, identity, topic } = await req.json();
@@ -166,6 +195,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'roomName and identity are required' }, { status: 400 });
   }
 
+  const roomService = await getRoomService();
   const room = await roomService.createRoom({
     name: roomName,
     emptyTimeout: 600,
@@ -177,134 +207,94 @@ export async function POST(req: NextRequest) {
 }
 ```
 
-**SDK mapping:** `RoomServiceClient.createRoom()`
+**SDK mapping:** `getRoomService()` (cached `getApiUrl()`), `RoomServiceClient.createRoom()`
 
 ### 3. Kick Participant — `app/api/kick/route.ts`
 
-Removes a participant. Backend verifies the caller is the host.
+Removes a participant. Backend verifies the caller's role from the request (not via `getParticipant()` which is local-only).
 
 ```typescript
-import { RoomServiceClient } from '@dtelecom/server-sdk-js';
 import { NextRequest, NextResponse } from 'next/server';
-
-const roomService = new RoomServiceClient(
-  process.env.DTELECOM_API_HOST!,
-  process.env.API_KEY!,
-  process.env.API_SECRET!
-);
+import { getRoomService } from '@/lib/room-service';
 
 export async function POST(req: NextRequest) {
-  const { room, identity, callerIdentity } = await req.json();
+  const { room, identity, callerRole } = await req.json();
 
-  if (!room || !identity || !callerIdentity) {
-    return NextResponse.json({ error: 'room, identity, and callerIdentity are required' }, { status: 400 });
+  if (!room || !identity || !callerRole) {
+    return NextResponse.json({ error: 'room, identity, and callerRole are required' }, { status: 400 });
   }
 
-  // Verify the caller is a host by checking their metadata on the server
-  const caller = await roomService.getParticipant(room, callerIdentity);
-  const callerMeta = JSON.parse(caller.metadata || '{}');
-
-  if (callerMeta.role !== 'host') {
+  if (callerRole !== 'host') {
     return NextResponse.json({ error: 'Only hosts can kick participants' }, { status: 403 });
   }
 
-  await roomService.removeParticipant(room, identity);
+  // RemoveParticipant broadcasts via P2P — works from any node
+  const client = await getRoomService();
+  await client.removeParticipant(room, identity);
   return NextResponse.json({ success: true });
 }
 ```
 
-**SDK mapping:** `RoomServiceClient.getParticipant()`, `.removeParticipant()`
+**SDK mapping:** `RoomServiceClient.removeParticipant()` (P2P broadcast — works cross-node)
 
 ### 4. Mute Participant — `app/api/mute/route.ts`
 
-Mutes a participant's track. Backend verifies the caller is the host.
+Mutes a participant's track. Backend verifies the caller's role.
 
 ```typescript
-import { RoomServiceClient } from '@dtelecom/server-sdk-js';
 import { NextRequest, NextResponse } from 'next/server';
-
-const roomService = new RoomServiceClient(
-  process.env.DTELECOM_API_HOST!,
-  process.env.API_KEY!,
-  process.env.API_SECRET!
-);
+import { getRoomService } from '@/lib/room-service';
 
 export async function POST(req: NextRequest) {
-  const { room, identity, trackSid, callerIdentity } = await req.json();
+  const { room, identity, trackSid, callerRole } = await req.json();
 
-  if (!room || !identity || !trackSid || !callerIdentity) {
-    return NextResponse.json({ error: 'room, identity, trackSid, and callerIdentity are required' }, { status: 400 });
+  if (!room || !identity || !trackSid || !callerRole) {
+    return NextResponse.json({ error: 'room, identity, trackSid, and callerRole are required' }, { status: 400 });
   }
 
-  // Verify the caller is a host
-  const caller = await roomService.getParticipant(room, callerIdentity);
-  const callerMeta = JSON.parse(caller.metadata || '{}');
-
-  if (callerMeta.role !== 'host') {
+  if (callerRole !== 'host') {
     return NextResponse.json({ error: 'Only hosts can mute participants' }, { status: 403 });
   }
 
-  await roomService.mutePublishedTrack(room, identity, trackSid, true);
+  // MutePublishedTrack broadcasts via P2P — works from any node
+  const client = await getRoomService();
+  await client.mutePublishedTrack(room, identity, trackSid, true);
   return NextResponse.json({ success: true });
 }
 ```
 
-**SDK mapping:** `RoomServiceClient.getParticipant()`, `.mutePublishedTrack()`
+**SDK mapping:** `RoomServiceClient.mutePublishedTrack()` (P2P broadcast — works cross-node)
 
 ### 5. List Participants — `app/api/participants/route.ts`
 
 ```typescript
-import { RoomServiceClient } from '@dtelecom/server-sdk-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-const roomService = new RoomServiceClient(
-  process.env.DTELECOM_API_HOST!,
-  process.env.API_KEY!,
-  process.env.API_SECRET!
-);
-
+// Note: In dTelecom's decentralized network, ListParticipants is a local-only
+// read that returns participants from a single node's in-memory store. It does
+// not aggregate across nodes. This endpoint is not used by the conference app.
 export async function GET(req: NextRequest) {
   const room = req.nextUrl.searchParams.get('room');
   if (!room) {
     return NextResponse.json({ error: 'room is required' }, { status: 400 });
   }
 
-  const participants = await roomService.listParticipants(room);
-  return NextResponse.json(participants.map(p => ({
-    identity: p.identity,
-    name: p.name,
-    metadata: p.metadata,
-    joinedAt: p.joinedAt,
-  })));
+  return NextResponse.json([]);
 }
 ```
-
-**SDK mapping:** `RoomServiceClient.listParticipants()`
 
 ### 6. List Rooms — `app/api/rooms/route.ts`
 
 ```typescript
-import { RoomServiceClient } from '@dtelecom/server-sdk-js';
 import { NextResponse } from 'next/server';
 
-const roomService = new RoomServiceClient(
-  process.env.DTELECOM_API_HOST!,
-  process.env.API_KEY!,
-  process.env.API_SECRET!
-);
-
+// Note: In dTelecom's decentralized network, ListRooms is a local-only read
+// that returns rooms hosted on a single node. It does not aggregate across
+// all nodes. This endpoint is not used by the conference app.
 export async function GET() {
-  const rooms = await roomService.listRooms();
-  return NextResponse.json(rooms.map(r => ({
-    name: r.name,
-    sid: r.sid,
-    numParticipants: r.numParticipants,
-    metadata: r.metadata,
-  })));
+  return NextResponse.json([]);
 }
 ```
-
-**SDK mapping:** `RoomServiceClient.listRooms()`
 
 ---
 
@@ -358,7 +348,7 @@ export default function Home() {
 
 ### 2. Pre-join Page — `app/prejoin/page.tsx`
 
-Uses `<PreJoin>` to preview camera/mic and select devices before joining.
+Uses `<PreJoin>` to preview camera/mic and select devices before joining. Token and wsUrl stored in sessionStorage (not URL params) for security.
 
 ```tsx
 'use client';
@@ -379,20 +369,19 @@ export default function PreJoinPage() {
   async function handleSubmit(choices: LocalUserChoices) {
     try {
       const { token, wsUrl } = await joinRoom(room, choices.username || identity, role);
-      const params = new URLSearchParams({
-        token,
-        wsUrl,
-        audioEnabled: String(choices.audioEnabled),
-        videoEnabled: String(choices.videoEnabled),
-      });
-      router.push(`/room/${encodeURIComponent(room)}?${params}`);
+      sessionStorage.setItem(`room:${room}`, JSON.stringify({
+        token, wsUrl,
+        audioEnabled: choices.audioEnabled,
+        videoEnabled: choices.videoEnabled,
+      }));
+      router.push(`/room/${encodeURIComponent(room)}`);
     } catch (e: any) {
       setError(e.message);
     }
   }
 
   return (
-    <div style={{ height: '100vh' }}>
+    <div data-lk-theme="default" style={{ height: '100vh' }}>
       {error && <div style={{ color: 'red', padding: 16 }}>{error}</div>}
       <PreJoin
         onSubmit={handleSubmit}
@@ -404,7 +393,7 @@ export default function PreJoinPage() {
 }
 ```
 
-**Component mapping:** `<PreJoin>` from `@dtelecom/components-react`, `LocalUserChoices` interface
+**Component mapping:** `<PreJoin>` from `@dtelecom/components-react`, `LocalUserChoices` interface. Note `data-lk-theme="default"` wrapper needed because PreJoin is outside `<LiveKitRoom>`.
 
 ### 3. Room Page — `app/room/[roomName]/page.tsx`
 
@@ -414,29 +403,42 @@ Connects to the room and renders the conference UI.
 'use client';
 import { LiveKitRoom } from '@dtelecom/components-react';
 import '@dtelecom/components-styles';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import ConferenceRoom from '@/components/ConferenceRoom';
+import { use, useState, useEffect } from 'react';
 
-export default function RoomPage({ params }: { params: { roomName: string } }) {
+interface RoomSession {
+  token: string;
+  wsUrl: string;
+  audioEnabled: boolean;
+  videoEnabled: boolean;
+}
+
+export default function RoomPage({ params }: { params: Promise<{ roomName: string }> }) {
+  const { roomName } = use(params);
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token') || '';
-  const wsUrl = searchParams.get('wsUrl') || '';
-  const audioEnabled = searchParams.get('audioEnabled') === 'true';
-  const videoEnabled = searchParams.get('videoEnabled') === 'true';
+  const [session, setSession] = useState<RoomSession | null>(null);
+  const [checked, setChecked] = useState(false);
 
-  if (!token || !wsUrl) {
-    router.push('/');
-    return null;
-  }
+  useEffect(() => {
+    const stored = sessionStorage.getItem(`room:${roomName}`);
+    if (stored) {
+      setSession(JSON.parse(stored));
+      sessionStorage.removeItem(`room:${roomName}`);
+    }
+    setChecked(true);
+  }, [roomName]);
+
+  if (!checked) return null;
+  if (!session) { router.push('/'); return null; }
 
   return (
     <LiveKitRoom
-      token={token}
-      serverUrl={wsUrl}
+      token={session.token}
+      serverUrl={session.wsUrl}
       connect={true}
-      audio={audioEnabled}
-      video={videoEnabled}
+      audio={session.audioEnabled}
+      video={session.videoEnabled}
       onDisconnected={() => router.push('/')}
       onError={(err) => console.error('Room error:', err)}
       onMediaDeviceFailure={(failure) => {
@@ -444,13 +446,13 @@ export default function RoomPage({ params }: { params: { roomName: string } }) {
         alert('Could not access camera or microphone. Please check permissions.');
       }}
     >
-      <ConferenceRoom roomName={params.roomName} />
+      <ConferenceRoom roomName={roomName} />
     </LiveKitRoom>
   );
 }
 ```
 
-**Component mapping:** `<LiveKitRoom>` with `audio`, `video`, `onError`, `onMediaDeviceFailure` props
+**Component mapping:** `<LiveKitRoom>` with `audio`, `video`, `onError`, `onMediaDeviceFailure` props. Token passed via `sessionStorage` (not URL params) for security.
 
 ---
 
@@ -548,7 +550,7 @@ export default function CustomControlBar({ roomName, onToggleParticipants, onTog
 
 ### 3. ParticipantListPanel — `components/ParticipantListPanel.tsx`
 
-Lists all participants. Hosts see kick/mute buttons.
+Lists all participants. Hosts see kick/mute buttons. Uses `participant.getTrack(Track.Source.Microphone)` to check audio state. Passes `callerRole` to backend for verification.
 
 ```tsx
 'use client';
@@ -556,6 +558,7 @@ import {
   useParticipants,
   useLocalParticipant,
 } from '@dtelecom/components-react';
+import { Track } from '@dtelecom/livekit-client';
 import type { ParticipantMeta } from '@/lib/types';
 import { kickParticipant, muteParticipant } from '@/lib/api';
 
@@ -567,16 +570,26 @@ interface Props {
 export default function ParticipantListPanel({ roomName, onClose }: Props) {
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
-  const localMeta: ParticipantMeta = JSON.parse(localParticipant.metadata || '{}');
+
+  let localMeta: ParticipantMeta = { role: 'guest' };
+  try { localMeta = JSON.parse(localParticipant.metadata || '{}'); } catch {}
   const isHost = localMeta.role === 'host';
 
   async function handleKick(identity: string) {
-    if (!confirm(`Kick ${identity}?`)) return;
-    await kickParticipant(roomName, identity);
+    if (!confirm(`Remove ${identity} from the room?`)) return;
+    try {
+      await kickParticipant(roomName, identity, localMeta.role);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Failed to kick participant');
+    }
   }
 
   async function handleMute(identity: string, trackSid: string) {
-    await muteParticipant(roomName, identity, trackSid);
+    try {
+      await muteParticipant(roomName, identity, trackSid, localMeta.role);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Failed to mute participant');
+    }
   }
 
   return (
@@ -586,22 +599,24 @@ export default function ParticipantListPanel({ roomName, onClose }: Props) {
         <button onClick={onClose}>Close</button>
       </div>
       {participants.map((p) => {
-        const meta: ParticipantMeta = JSON.parse(p.metadata || '{}');
-        const audioTrack = p.getTrackPublications().find(
-          (t) => t.source === 'microphone'
-        );
+        let meta: ParticipantMeta = { role: 'guest' };
+        try { meta = JSON.parse(p.metadata || '{}'); } catch {}
+        const audioTrack = p.getTrack(Track.Source.Microphone);
+        const isLocal = p.identity === localParticipant.identity;
+
         return (
           <div key={p.identity} style={{ padding: '8px 0', borderBottom: '1px solid #222' }}>
             <span>{p.name || p.identity}</span>
+            {isLocal && <span style={{ marginLeft: 8, fontSize: 12 }}>(You)</span>}
             {meta.role === 'host' && <span style={{ marginLeft: 8, fontSize: 12 }}>(Host)</span>}
-            {isHost && p.identity !== localParticipant.identity && (
+            {isHost && !isLocal && (
               <span style={{ float: 'right' }}>
-                {audioTrack && (
+                {audioTrack && !audioTrack.isMuted && (
                   <button onClick={() => handleMute(p.identity, audioTrack.trackSid)} style={{ marginRight: 4 }}>
                     Mute
                   </button>
                 )}
-                <button onClick={() => handleKick(p.identity)}>Kick</button>
+                <button onClick={() => handleKick(p.identity)}>Remove</button>
               </span>
             )}
           </div>
@@ -612,7 +627,7 @@ export default function ParticipantListPanel({ roomName, onClose }: Props) {
 }
 ```
 
-**Hook mapping:** `useParticipants()`, `useLocalParticipant()` from `@dtelecom/components-react`
+**Hook mapping:** `useParticipants()`, `useLocalParticipant()`, `participant.getTrack(Track.Source.Microphone)`
 
 ### 4. ChatPanel — `components/ChatPanel.tsx`
 
@@ -643,7 +658,7 @@ export default function ChatPanel({ onClose }: Props) {
 
 **Component mapping:** `<Chat>` from `@dtelecom/components-react` (requires `canPublishData: true` in token grant)
 
-For custom chat UI, use the `useChat` hook:
+For custom chat UI, use the `useChat` hook. Note: `send` may be `undefined` before connection — use optional chaining:
 
 ```tsx
 import { useChat } from '@dtelecom/components-react';
@@ -658,7 +673,7 @@ function CustomChat() {
           <strong>{msg.from?.name}: </strong>{msg.message}
         </div>
       ))}
-      <form onSubmit={(e) => { e.preventDefault(); send(inputValue); }}>
+      <form onSubmit={(e) => { e.preventDefault(); send?.(inputValue); }}>
         <input ... />
       </form>
     </div>
@@ -740,21 +755,23 @@ const { localParticipant } = useLocalParticipant();
 const meta = JSON.parse(localParticipant.metadata || '{}');
 const isHost = meta.role === 'host';
 // Use isHost to conditionally render kick/mute buttons
+// Pass meta.role as callerRole to backend API calls
 ```
 
-### 3. Backend verifies before privileged actions
+### 3. Backend verifies callerRole before privileged actions
 
 ```typescript
 // In your API route (e.g. /api/kick)
-const caller = await roomService.getParticipant(room, callerIdentity);
-const callerMeta = JSON.parse(caller.metadata || '{}');
-if (callerMeta.role !== 'host') {
+const { room, identity, callerRole } = await req.json();
+if (callerRole !== 'host') {
   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 }
-// Only then call roomService.removeParticipant(...)
+// Write ops broadcast via P2P — work from any node
+const client = await getRoomService();
+await client.removeParticipant(room, identity);
 ```
 
-**Security note:** Never trust the client-side role check alone. The client uses it for UI (showing/hiding buttons), but the backend must verify the caller's role before executing any privileged action.
+**Why not `getParticipant()` for verification?** Because it's a local read — only checks the current node's in-memory store. The caller may be on a different node, causing a 404. The role in `callerRole` was embedded in the JWT by your server during token creation, so it is trustworthy.
 
 ---
 
@@ -779,6 +796,8 @@ if (callerMeta.role !== 'host') {
 |:--------|:---------------|:------------|
 | Token creation | `AccessToken` | `@dtelecom/server-sdk-js` |
 | WebSocket URL resolution | `AccessToken.getWsUrl()` | `@dtelecom/server-sdk-js` |
+| API URL resolution | `AccessToken.getApiUrl()` | `@dtelecom/server-sdk-js` |
+| Room management | `RoomServiceClient` (via `getRoomService()`) | `@dtelecom/server-sdk-js` |
 | Room connection | `<LiveKitRoom>` | `@dtelecom/components-react` |
 | Video grid | `<GridLayout>` + `<ParticipantTile>` | `@dtelecom/components-react` |
 | Control bar (mic/cam/screen/leave) | `<ControlBar>` | `@dtelecom/components-react` |
@@ -787,13 +806,14 @@ if (callerMeta.role !== 'host') {
 | Chat messages | `<Chat>` or `useChat` | `@dtelecom/components-react` |
 | Participant list (client-side) | `useParticipants()` | `@dtelecom/components-react` |
 | Local participant info | `useLocalParticipant()` | `@dtelecom/components-react` |
-| Remote participants only | `useRemoteParticipants()` | `@dtelecom/components-react` |
-| Room context access | `useRoomContext()` | `@dtelecom/components-react` |
+| Track lookup | `participant.getTrack(Track.Source.Microphone)` | `@dtelecom/livekit-client` |
 | Connection state | `useConnectionState()` | `@dtelecom/components-react` |
 | Track listing | `useTracks()` | `@dtelecom/components-react` |
 | Kick participant | `RoomServiceClient.removeParticipant()` | `@dtelecom/server-sdk-js` |
 | Mute participant | `RoomServiceClient.mutePublishedTrack()` | `@dtelecom/server-sdk-js` |
-| Create/list rooms | `RoomServiceClient.createRoom()` / `.listRooms()` | `@dtelecom/server-sdk-js` |
+| Create room | `RoomServiceClient.createRoom()` | `@dtelecom/server-sdk-js` |
+| List rooms (local-only) | `RoomServiceClient.listRooms()` | `@dtelecom/server-sdk-js` |
+| List participants (local-only) | `RoomServiceClient.listParticipants()` | `@dtelecom/server-sdk-js` |
 
 ---
 
@@ -803,7 +823,7 @@ This app uses **no external state management libraries**. All state comes from:
 
 1. **LiveKitRoom context** — `<LiveKitRoom>` provides a React context that all hooks read from (`useParticipants`, `useLocalParticipant`, `useConnectionState`, `useTracks`, `useChat`, etc.)
 2. **React useState** — for local UI state (sidebar toggle, form inputs, error messages)
-3. **URL search params** — for passing token/wsUrl/settings between pages
+3. **sessionStorage** — for passing token/wsUrl/settings between pages (more secure than URL params)
 
 There is no need for Redux, Zustand, or other state libraries because the room state is fully managed by the LiveKit React context.
 
@@ -813,6 +833,7 @@ There is no need for Redux, Zustand, or other state libraries because the room s
 
 ```bash
 npx create-next-app@latest my-conference --app --typescript
+# When prompted about React Compiler, select "No" (experimental, may cause issues)
 cd my-conference
 npm install @dtelecom/server-sdk-js @dtelecom/livekit-client @dtelecom/components-react @dtelecom/components-styles
 ```
