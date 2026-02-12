@@ -40,14 +40,16 @@ dTelecom is a **decentralized real-time communication platform** for video, audi
 ```
 my-conference/
   app/
-    page.tsx                          # Home page — create/join room
+    page.tsx                          # Home page — create/join room (shows participant count)
     prejoin/page.tsx                  # Pre-join page — camera/mic preview
     room/[roomName]/page.tsx          # Room page — the actual conference
     api/
-      join/route.ts                   # Create token + resolve wsUrl
+      join/route.ts                   # Create token + resolve wsUrl (includes webHookURL)
       create-room/route.ts            # Create a room (host only)
       kick/route.ts                   # Remove participant (host only)
       mute/route.ts                   # Mute participant track (host only)
+      webhook/route.ts                # Receive webhook events from SFU nodes
+      room-count/route.ts             # GET participant count for a room
       participants/route.ts           # List participants (local-only read)
       rooms/route.ts                  # List active rooms (local-only read)
   components/
@@ -61,6 +63,7 @@ my-conference/
     types.ts                          # Shared types (Role, RoomMetadata)
     api.ts                            # Client-side fetch helpers
     room-service.ts                   # Server-side RoomServiceClient (cached getApiUrl())
+    participant-count.ts              # In-memory participant count store (survives HMR)
   .env.local                          # Environment variables
 ```
 
@@ -86,9 +89,12 @@ API_SECRET=<your-api-secret-from-cloud.dtelecom.org>
 SOLANA_CONTRACT_ADDRESS=E2FcHsC9STeB6FEtxBKGAwMTX7cbfYMyjSHKs4QbBAmh
 SOLANA_NETWORK_HOST_HTTP=https://api.mainnet-beta.solana.com
 SOLANA_REGISTRY_AUTHORITY=6KVRs6Yr2oYzddepFdtWrFmVq8sgELcXzbUy7apwuQX4
+WEBHOOK_URL=https://your-public-url.com/api/webhook
 ```
 
 No `DTELECOM_API_HOST` needed — use `getApiUrl()` to discover the API endpoint automatically.
+
+`WEBHOOK_URL` is embedded in every access token so SFU nodes know where to send events. During development, use [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/create-local-tunnel/) to expose localhost (see [Webhooks](#webhooks--participant-count) below).
 
 ---
 
@@ -193,7 +199,7 @@ export async function POST(req: NextRequest) {
   const at = new AccessToken(
     process.env.API_KEY!,
     process.env.API_SECRET!,
-    { identity, name: identity, metadata }
+    { identity, name: identity, metadata, webHookURL: process.env.WEBHOOK_URL }
   );
   at.addGrant({
     roomJoin: true,
@@ -859,6 +865,89 @@ This app uses **no external state management libraries**. All state comes from:
 3. **sessionStorage** — for passing token/wsUrl/settings between pages (more secure than URL params)
 
 There is no need for Redux, Zustand, or other state libraries because the room state is fully managed by the LiveKit React context.
+
+---
+
+## Webhooks & Participant Count
+
+dTelecom embeds the webhook URL in the access token (via the `webHookURL` option) — there is no dashboard configuration. When a participant connects, the SFU node reads the URL from the JWT and sends events there.
+
+### In-memory count store — `lib/participant-count.ts`
+
+```typescript
+// globalThis trick to survive Next.js hot-reload in dev
+const g = globalThis as typeof globalThis & { __participantCounts?: Map<string, number> };
+const counts = (g.__participantCounts ??= new Map<string, number>());
+
+export function incrementRoom(name: string): void {
+  counts.set(name, (counts.get(name) ?? 0) + 1);
+}
+
+export function decrementRoom(name: string): void {
+  const n = (counts.get(name) ?? 0) - 1;
+  n <= 0 ? counts.delete(name) : counts.set(name, n);
+}
+
+export function clearRoom(name: string): void {
+  counts.delete(name);
+}
+
+export function getRoomCount(name: string): number {
+  return counts.get(name) ?? 0;
+}
+```
+
+### Webhook receiver — `app/api/webhook/route.ts`
+
+Webhooks are signed by the **SFU node** with its own Ed25519 key (not your app's key). `WebhookReceiver` automatically validates the node via the Solana registry, verifies the JWT signature, and checks the SHA-256 body hash. `receive()` is **async** because it may query Solana on first use.
+
+```typescript
+import { WebhookReceiver } from '@dtelecom/server-sdk-js';
+import { NextRequest, NextResponse } from 'next/server';
+import { incrementRoom, decrementRoom, clearRoom } from '@/lib/participant-count';
+
+const receiver = new WebhookReceiver(process.env.API_KEY!, process.env.API_SECRET!);
+
+export async function POST(req: NextRequest) {
+  const body = await req.text(); // raw body needed for SHA-256 verification
+  const authToken = req.headers.get('Authorization') ?? '';
+  const event = await receiver.receive(body, authToken);
+
+  const roomName = event.room?.name;
+  if (roomName) {
+    if (event.event === 'participant_joined') incrementRoom(roomName);
+    if (event.event === 'participant_left') decrementRoom(roomName);
+    if (event.event === 'room_finished') clearRoom(roomName);
+  }
+
+  return NextResponse.json({ ok: true });
+}
+```
+
+### Room count endpoint — `app/api/room-count/route.ts`
+
+```typescript
+import { NextRequest, NextResponse } from 'next/server';
+import { getRoomCount } from '@/lib/participant-count';
+
+export async function GET(req: NextRequest) {
+  const room = req.nextUrl.searchParams.get('room');
+  if (!room) return NextResponse.json({ error: 'room is required' }, { status: 400 });
+  return NextResponse.json({ room, count: getRoomCount(room) });
+}
+```
+
+### Development: cloudflared tunnel
+
+dTelecom SFU nodes can't reach `localhost`, so you need a tunnel during development:
+
+```bash
+brew install cloudflared
+cloudflared tunnel --url http://localhost:3000
+# Prints: https://random-words.trycloudflare.com
+```
+
+Set `WEBHOOK_URL=https://random-words.trycloudflare.com/api/webhook` in `.env.local` and restart your dev server.
 
 ---
 

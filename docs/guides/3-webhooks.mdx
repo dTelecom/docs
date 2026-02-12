@@ -6,13 +6,46 @@ import TabItem from '@theme/TabItem';
 
 dTelecom will notify your server when room events take place. This can be helpful for your backend to know when a room has finished, or when a participant leaves.
 
+## Configuring the webhook URL
+
+Unlike centralized services that configure webhooks in a dashboard, dTelecom embeds the webhook URL **in the access token**. When you create an `AccessToken`, pass the `webHookURL` option — the SFU node will send events to that URL for any participant using that token.
+
+```typescript
+const at = new AccessToken(process.env.API_KEY!, process.env.API_SECRET!, {
+  identity: 'user-1',
+  name: 'Alice',
+  webHookURL: process.env.WEBHOOK_URL, // e.g. https://my-app.example.com/api/webhook
+});
+at.addGrant({ roomJoin: true, room: 'my-room', canPublish: true, canSubscribe: true });
+```
+
+Add `WEBHOOK_URL` to your `.env.local`:
+
+```bash
+WEBHOOK_URL=https://my-app.example.com/api/webhook
+```
+
+:::tip Development tunnel
+dTelecom SFU nodes can't reach `localhost`. During development, use [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/create-local-tunnel/) (no signup required) to expose your local server:
+
+```bash
+brew install cloudflared
+cloudflared tunnel --url http://localhost:3000
+# Prints: https://random-words.trycloudflare.com
+```
+
+Set `WEBHOOK_URL=https://random-words.trycloudflare.com/api/webhook` in `.env.local` and restart your dev server.
+:::
+
 ## Receiving webhooks
 
-Webhook requests are HTTP POST requests sent to URLs that you specify in the config. A `WebhookEvent` is sent as the body of the request, encoded in JSON.
+Webhook requests are HTTP POST requests with a JSON-encoded `WebhookEvent` body.
 
-In order to ensure the requests are coming from dTelecom, the requests carry a `Authentication` header, containing a signed JWT token. The token includes a sha256 hash of the payload.
+To verify that requests are coming from dTelecom, each request carries an `Authorization` header containing a signed JWT with a SHA-256 hash of the payload.
 
-dTelecom server SDKs provide webhook receiver libraries that will help with validation and decoding of the payload.
+In dTelecom's decentralized network, webhooks are signed by the **SFU node** (not your application). The `WebhookReceiver` class automatically verifies the node's identity by looking up its public key in the Solana registry, then verifies the Ed25519 signature and SHA-256 body hash.
+
+Note: `receiver.receive()` is **async** because it may query the Solana blockchain to validate the node on first use.
 
 <Tabs
     defaultValue="node"
@@ -22,19 +55,52 @@ dTelecom server SDKs provide webhook receiver libraries that will help with vali
     ]}>
   <TabItem value="node">
 
-```typescript title="TypeScript"
+```typescript title="app/api/webhook/route.ts (Next.js App Router)"
+import { WebhookReceiver } from '@dtelecom/server-sdk-js';
+import { NextRequest, NextResponse } from 'next/server';
+
+const receiver = new WebhookReceiver(process.env.API_KEY!, process.env.API_SECRET!);
+
+export async function POST(req: NextRequest) {
+  const body = await req.text(); // raw body needed for SHA-256 verification
+  const authToken = req.headers.get('Authorization') ?? '';
+
+  try {
+    const event = await receiver.receive(body, authToken);
+
+    switch (event.event) {
+      case 'room_started':
+        console.log('Room started:', event.room?.name);
+        break;
+      case 'room_finished':
+        console.log('Room finished:', event.room?.name);
+        break;
+      case 'participant_joined':
+        console.log('Joined:', event.participant?.identity, 'in', event.room?.name);
+        break;
+      case 'participant_left':
+        console.log('Left:', event.participant?.identity, 'from', event.room?.name);
+        break;
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ error: 'Invalid webhook' }, { status: 400 });
+  }
+}
+```
+
+```typescript title="Express"
 import { WebhookReceiver } from '@dtelecom/server-sdk-js';
 
-const receiver = new WebhookReceiver("apikey", "apisecret");
+const receiver = new WebhookReceiver(apiKey, apiSecret);
 
-// In order to use the validator, WebhookReceiver must have access to the raw POSTed string (instead of a parsed JSON object)
-// if you are using express middleware, ensure that `express.raw` is used for the webhook endpoint
-// router.use('/webhook/path', express.raw());
-
-app.post('/webhook-endpoint', (req, res) => {
-  // event is a WebhookEvent object
-  const event = receiver.receive(req.body, req.get('Authorization'))
-})
+// Use express.raw() so the body is a raw string (needed for SHA-256 verification)
+app.post('/webhook', express.raw({ type: '*/*' }), async (req, res) => {
+  const event = await receiver.receive(req.body.toString(), req.get('Authorization'));
+  console.log('webhook event:', event.event, event.room?.name);
+  res.status(200).end();
+});
 ```
 
   </TabItem>

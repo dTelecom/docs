@@ -45,10 +45,12 @@ API_SECRET=<from-cloud.dtelecom.org>
 SOLANA_CONTRACT_ADDRESS=E2FcHsC9STeB6FEtxBKGAwMTX7cbfYMyjSHKs4QbBAmh
 SOLANA_NETWORK_HOST_HTTP=https://api.mainnet-beta.solana.com
 SOLANA_REGISTRY_AUTHORITY=6KVRs6Yr2oYzddepFdtWrFmVq8sgELcXzbUy7apwuQX4
+WEBHOOK_URL=https://your-public-url.com/api/webhook
 ```
 
 - `API_KEY` / `API_SECRET`: Ed25519 keypair from cloud.dtelecom.org (project-specific)
 - The three `SOLANA_*` values are mainnet constants (same for all projects)
+- `WEBHOOK_URL`: Public URL where dTelecom SFU nodes send webhook events (set per-token via `webHookURL`). During dev, use cloudflared (`cloudflared tunnel --url http://localhost:3000`) since SFU nodes can't reach localhost.
 - The server SDK reads these from `process.env` automatically
 
 ---
@@ -78,6 +80,7 @@ const at = new AccessToken(process.env.API_KEY!, process.env.API_SECRET!, {
   identity: 'user-1',       // unique participant identity
   name: 'Display Name',     // optional display name
   metadata: '{"role":"host"}', // optional metadata string
+  webHookURL: process.env.WEBHOOK_URL, // optional: SFU sends events to this URL
 });
 
 // Grant permissions
@@ -208,18 +211,26 @@ Never trust client-side role checks alone — always verify on the server.
 
 ### WebhookReceiver
 
+The webhook URL is set per-token via the `webHookURL` option on `AccessToken` (not in a dashboard). The SFU node sends events to that URL for any participant using that token.
+
+In dTelecom's decentralized network, webhooks are signed by the **SFU node** with its own Ed25519 key (not your app's key). `WebhookReceiver` automatically validates the node via the Solana registry, verifies the JWT signature, and checks the SHA-256 body hash. `receive()` is **async**.
+
 ```typescript
 import { WebhookReceiver } from '@dtelecom/server-sdk-js';
+import { NextRequest, NextResponse } from 'next/server';
 
-const receiver = new WebhookReceiver(apiKey, apiSecret);
+const receiver = new WebhookReceiver(process.env.API_KEY!, process.env.API_SECRET!);
 
-// Express example (use express.raw() middleware for the webhook endpoint)
-app.post('/webhook', (req, res) => {
-  const event = receiver.receive(req.body, req.get('Authorization'));
+// Next.js App Router example
+export async function POST(req: NextRequest) {
+  const body = await req.text(); // raw body needed for SHA-256 verification
+  const authToken = req.headers.get('Authorization') ?? '';
+  const event = await receiver.receive(body, authToken);
   // event.event: 'room_started' | 'room_finished' | 'participant_joined' | 'participant_left'
   // event.room: Room object
   // event.participant: Participant object (for participant events)
-});
+  return NextResponse.json({ ok: true });
+}
 ```
 
 ---
@@ -523,7 +534,7 @@ export async function POST(req: NextRequest) {
   const at = new AccessToken(
     process.env.API_KEY!,
     process.env.API_SECRET!,
-    { identity, name: identity }
+    { identity, name: identity, webHookURL: process.env.WEBHOOK_URL }
   );
   at.addGrant({
     roomJoin: true,
@@ -626,6 +637,8 @@ Run: `npm run dev` — open two tabs at http://localhost:3000, join the same roo
 ---
 
 ## Webhook Events
+
+The webhook URL is configured per-token via `webHookURL` in `AccessTokenOptions` (not in a dashboard). Webhooks are signed by SFU nodes with their own Ed25519 keys; `WebhookReceiver` validates node identity via the Solana registry.
 
 | Event | Fields | Description |
 |-------|--------|-------------|

@@ -328,6 +328,119 @@ To let the room creator kick or mute participants, use the role-in-metadata patt
 
 See [Host controls pattern](/guides/server-api#host-controls-pattern) for complete endpoint examples.
 
+## Webhooks: participant count on the join screen
+
+You can use webhooks to track how many participants are in each room and display this on the join screen. dTelecom embeds the webhook URL in the access token — no dashboard configuration needed.
+
+### 1. Add `WEBHOOK_URL` to `.env.local`
+
+```bash
+WEBHOOK_URL=https://your-public-url.com/api/webhook
+```
+
+During development, use [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/create-local-tunnel/) (no signup) to expose localhost:
+
+```bash
+brew install cloudflared
+cloudflared tunnel --url http://localhost:3000
+# Set WEBHOOK_URL to the printed URL + /api/webhook
+```
+
+### 2. Pass `webHookURL` in the token
+
+Update your join route to include `webHookURL` in the `AccessToken` options:
+
+```typescript title="app/api/join/route.ts" {5}
+const at = new AccessToken(
+  process.env.API_KEY!,
+  process.env.API_SECRET!,
+  { identity, name: identity, metadata, webHookURL: process.env.WEBHOOK_URL }
+);
+```
+
+### 3. Webhook receiver
+
+Create an endpoint that receives events and tracks counts in memory:
+
+```typescript title="lib/participant-count.ts"
+const g = globalThis as typeof globalThis & { __participantCounts?: Map<string, number> };
+const counts = (g.__participantCounts ??= new Map<string, number>());
+
+export function incrementRoom(name: string): void {
+  counts.set(name, (counts.get(name) ?? 0) + 1);
+}
+
+export function decrementRoom(name: string): void {
+  const n = (counts.get(name) ?? 0) - 1;
+  n <= 0 ? counts.delete(name) : counts.set(name, n);
+}
+
+export function clearRoom(name: string): void {
+  counts.delete(name);
+}
+
+export function getRoomCount(name: string): number {
+  return counts.get(name) ?? 0;
+}
+```
+
+```typescript title="app/api/webhook/route.ts"
+import { WebhookReceiver } from '@dtelecom/server-sdk-js';
+import { NextRequest, NextResponse } from 'next/server';
+import { incrementRoom, decrementRoom, clearRoom } from '@/lib/participant-count';
+
+const receiver = new WebhookReceiver(process.env.API_KEY!, process.env.API_SECRET!);
+
+export async function POST(req: NextRequest) {
+  const body = await req.text();
+  const authToken = req.headers.get('Authorization') ?? '';
+  const event = await receiver.receive(body, authToken);
+
+  const roomName = event.room?.name;
+  if (roomName) {
+    if (event.event === 'participant_joined') incrementRoom(roomName);
+    if (event.event === 'participant_left') decrementRoom(roomName);
+    if (event.event === 'room_finished') clearRoom(roomName);
+  }
+
+  return NextResponse.json({ ok: true });
+}
+```
+
+Webhooks are signed by the **SFU node** (not your app). `WebhookReceiver` automatically validates the node via the Solana registry. See [Webhooks](/guides/webhooks) for details.
+
+### 4. Display count on the join page
+
+Add a GET endpoint and fetch it from the home page:
+
+```typescript title="app/api/room-count/route.ts"
+import { NextRequest, NextResponse } from 'next/server';
+import { getRoomCount } from '@/lib/participant-count';
+
+export async function GET(req: NextRequest) {
+  const room = req.nextUrl.searchParams.get('room');
+  if (!room) return NextResponse.json({ error: 'room is required' }, { status: 400 });
+  return NextResponse.json({ room, count: getRoomCount(room) });
+}
+```
+
+On the home page, debounce-fetch the count as the user types a room name:
+
+```tsx
+const [participantCount, setParticipantCount] = useState<number | null>(null);
+
+useEffect(() => {
+  const trimmed = roomName.trim();
+  if (!trimmed) { setParticipantCount(null); return; }
+  const timer = setTimeout(() => {
+    fetch(`/api/room-count?room=${encodeURIComponent(trimmed)}`)
+      .then(r => r.json())
+      .then(d => setParticipantCount(d.count ?? 0));
+  }, 400);
+  return () => clearTimeout(timer);
+}, [roomName]);
+```
+
 ## Next steps
 
 - [Server APIs](/guides/server-api) — manage rooms and participants programmatically

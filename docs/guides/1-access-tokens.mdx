@@ -81,6 +81,18 @@ To create a token where the participant can only subscribe, and not publish into
 }
 ```
 
+## Webhook URL
+
+You can embed a webhook URL in the token so the SFU node sends room events (participant joined/left, room finished) to your server. See [Webhooks](/guides/webhooks) for details.
+
+```typescript
+const at = new AccessToken(apiKey, apiSecret, {
+  identity: 'user-1',
+  name: 'Alice',
+  webHookURL: process.env.WEBHOOK_URL, // e.g. https://my-app.example.com/api/webhook
+});
+```
+
 ## Token expiration
 
 A tokens has an expiration time. We recommend setting it to the expected duration of a session. A dTelecom client will store a token for the entire session duration, in case it needs to reconnect.

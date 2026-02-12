@@ -214,11 +214,25 @@ at.addGrant({ roomJoin: true, room: roomName, canPublish: true, canSubscribe: tr
 
 <webhook_events>
 
-dTelecom sends webhooks as HTTP POST with JSON body and an `Authorization` header containing a signed JWT.
+dTelecom sends webhooks as HTTP POST with JSON body and an `Authorization` header containing a signed JWT with a SHA-256 body hash.
+
+The webhook URL is configured per-token via the `webHookURL` option on `AccessToken` — there is no dashboard configuration. The SFU node reads the URL from the JWT and sends events there.
+
+In dTelecom's decentralized network, webhooks are signed by the **SFU node** with its own Ed25519 key (not your app's key). `WebhookReceiver` automatically validates the node via the Solana registry, verifies the signature, and checks the body hash. `receive()` is **async**.
+
+```typescript
+// Set webhook URL when creating the token
+const at = new AccessToken(apiKey, apiSecret, {
+  identity: 'user-1',
+  webHookURL: process.env.WEBHOOK_URL, // e.g. https://my-app.example.com/api/webhook
+});
+```
 
 Events: `room_started`, `room_finished`, `participant_joined`, `participant_left`
 
 Each event contains a `room` object. Participant events also contain a `participant` object.
+
+During development, use cloudflared (`cloudflared tunnel --url http://localhost:3000`) to expose localhost since SFU nodes can't reach `localhost` directly.
 
 </webhook_events>
 
@@ -273,7 +287,7 @@ export async function POST(req: NextRequest) {
   const at = new AccessToken(
     process.env.API_KEY!,
     process.env.API_SECRET!,
-    { identity, name: identity }
+    { identity, name: identity, webHookURL: process.env.WEBHOOK_URL }
   );
   at.addGrant({
     roomJoin: true,
@@ -581,7 +595,7 @@ await roomService.deleteRoom('meeting-123');
 
 <reference_example id="webhook-handler">
 
-For handling dTelecom webhooks in Next.js:
+For handling dTelecom webhooks in Next.js. The webhook URL is set per-token via `webHookURL` in AccessToken options. Webhooks are signed by SFU nodes; `receive()` is async:
 
 ```typescript
 import { WebhookReceiver } from '@dtelecom/server-sdk-js';
@@ -590,11 +604,11 @@ import { NextRequest, NextResponse } from 'next/server';
 const receiver = new WebhookReceiver(process.env.API_KEY!, process.env.API_SECRET!);
 
 export async function POST(req: NextRequest) {
-  const body = await req.text();
-  const authHeader = req.headers.get('authorization') || '';
+  const body = await req.text(); // raw body needed for SHA-256 verification
+  const authToken = req.headers.get('Authorization') ?? '';
 
   try {
-    const event = receiver.receive(body, authHeader);
+    const event = await receiver.receive(body, authToken);
 
     switch (event.event) {
       case 'room_started':
@@ -613,7 +627,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (e) {
-    return NextResponse.json({ error: 'Invalid webhook' }, { status: 401 });
+    return NextResponse.json({ error: 'Invalid webhook' }, { status: 400 });
   }
 }
 ```
