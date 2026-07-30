@@ -1,6 +1,16 @@
 # dTelecom — Complete Documentation for LLMs
 
-> dTelecom is a decentralized WebRTC video conferencing platform built on Solana. It is an API-compatible fork of LiveKit with decentralized SFU node discovery via Solana blockchain and Ed25519 JWT signing. Use it to build real-time audio/video applications with JavaScript/TypeScript.
+> Implementation documentation for the dTelecom WebRTC SDK. dTelecom is a decentralized real-time communication platform for voice, video, chat, livestreaming, and AI voice agents. It is LiveKit-compatible, uses decentralized SFU node discovery via Solana, and signs access tokens with Ed25519.
+
+## Canonical Product Context
+
+- Company and product overview: https://www.dtelecom.org/llms.txt
+- WebRTC SDK: https://www.dtelecom.org/webrtc-sdk
+- Pricing: https://www.dtelecom.org/pricing
+- LiveKit alternative: https://www.dtelecom.org/livekit-alternative
+- AI voice agent SDK: https://www.dtelecom.org/ai-voice-agent-sdk
+- Agent-payable WebRTC/STT/TTS gateway: https://x402.dtelecom.org/llms.txt
+- Gateway API docs: https://x402.dtelecom.org/docs.md
 
 ## Key Differences from LiveKit
 

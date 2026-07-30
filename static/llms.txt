@@ -1,12 +1,25 @@
 # dTelecom Documentation
 
-> dTelecom is a decentralized WebRTC video conferencing platform. It is a fork of LiveKit with Solana-based node discovery and Ed25519 JWT signing. Build real-time audio/video apps using JavaScript/TypeScript SDKs.
+> Implementation documentation for the dTelecom WebRTC SDK. dTelecom is a decentralized real-time communication platform for voice, video, chat, livestreaming, and AI voice agents. The SDK is LiveKit-compatible, uses Solana-based SFU node discovery, and signs access tokens with Ed25519.
 
 For complete content in a single file: [/llms-full.txt](https://docs.dtelecom.org/llms-full.txt)
 For AI system prompt: [/prompt.txt](https://docs.dtelecom.org/prompt.txt)
 All pages as markdown index: [/docs.md](https://docs.dtelecom.org/docs.md)
+Canonical company/product overview: [www.dtelecom.org/llms.txt](https://www.dtelecom.org/llms.txt)
+Agent-payable WebRTC/STT/TTS gateway: [x402.dtelecom.org/llms.txt](https://x402.dtelecom.org/llms.txt)
 Conference app blueprint (full code + architecture): [CONFERENCE_APP_PLAN.md](https://github.com/dTelecom/docs/blob/main/CONFERENCE_APP_PLAN.md)
 Example app created 100% by AI agent: [dTelecom Meet](https://github.com/dTelecom/dtelecom-meet) | [Live Demo](https://dtelecom-meet-demo.vercel.app/)
+
+## Product Pages
+
+- [WebRTC SDK](https://www.dtelecom.org/webrtc-sdk): Buyer-facing overview for building real-time voice, video, chat, and livestreaming apps on dTelecom.
+- [Pricing](https://www.dtelecom.org/pricing): Flat bandwidth pricing for WebRTC plus pay-per-use x402 pricing for AI-agent services.
+- [LiveKit Alternative](https://www.dtelecom.org/livekit-alternative): Migration and comparison context for LiveKit users.
+- [AI Voice Agent SDK](https://www.dtelecom.org/ai-voice-agent-sdk): Voice-agent infrastructure using WebRTC + STT + TTS.
+- [STT API](https://www.dtelecom.org/stt-api): Speech-to-text API context.
+- [TTS API](https://www.dtelecom.org/tts-api): Text-to-speech API context.
+- [Enterprise](https://www.dtelecom.org/enterprise): Enterprise deployment, data sovereignty, and support context.
+- [Security](https://www.dtelecom.org/security): Security, privacy, and infrastructure controls.
 
 ## Docs
 
