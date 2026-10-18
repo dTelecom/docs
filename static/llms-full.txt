@@ -200,16 +200,29 @@ await client.sendData('my-room', data, 0, { destinationSids: ['PA_xxx'], topic: 
 
 To let hosts kick or mute participants, your backend verifies the caller's role before executing.
 
-**IMPORTANT:** Do NOT use `getParticipant()` to verify the caller — it is a local read that only checks the current node. The caller may be on a different node, causing a 404. Instead, pass `callerRole` from the client (the role was set in the JWT by your server, so it is trustworthy).
+**IMPORTANT:** Do NOT use `getParticipant()` to verify the caller — it is a local read that only checks the current node. The caller may be on a different node, causing a 404. Instead, the client sends its access token (`Authorization: Bearer <token>`) and the backend verifies it with `TokenVerifier`, taking the role and room from the signed claims. NEVER authorize from a role sent in the request body — any client can send `"host"`. Your server must also decide the role at token creation (not accept it from the client).
 
 ```typescript
 // Backend API route (e.g. /api/kick)
-const { room, identity, callerRole } = await req.json();
+import { TokenVerifier } from '@dtelecom/server-sdk-js';
 
-// Verify the caller is a host (role was embedded in JWT by your server)
-if (callerRole !== 'host') {
+const token = req.headers.get('authorization')?.replace(/^Bearer /, '') ?? '';
+let claims;
+try {
+  claims = new TokenVerifier(process.env.API_KEY!).verify(token); // checks signature, issuer, expiry
+} catch {
+  return NextResponse.json({ error: 'Invalid or missing access token' }, { status: 401 });
+}
+
+// Role and room come from the signed token, not the request body
+let role: string | undefined;
+try { role = JSON.parse(claims.metadata || '{}').role; } catch {}
+const room = claims.video?.room;
+if (role !== 'host' || !room) {
   return NextResponse.json({ error: 'Only hosts can kick participants' }, { status: 403 });
 }
+
+const { identity } = await req.json();
 
 // Write operations broadcast via P2P — they work from any node
 const client = await getRoomService();

@@ -63,6 +63,7 @@ my-conference/
     types.ts                          # Shared types (Role, RoomMetadata)
     api.ts                            # Client-side fetch helpers
     room-service.ts                   # Server-side RoomServiceClient (cached getApiUrl())
+    require-host.ts                   # Server-side host check (verifies caller's access token)
     participant-count.ts              # In-memory participant count store (survives HMR)
   .env.local                          # Environment variables
 ```
@@ -76,7 +77,7 @@ dTelecom runs on multiple independent SFU nodes. This affects how server APIs be
 - **Write operations** (RemoveParticipant, MutePublishedTrack, UpdateParticipant, SendData, CreateRoom, DeleteRoom) are **broadcast via P2P** across all nodes — call any node and the action reaches the correct target.
 - **Read operations** (ListRooms, ListParticipants, GetParticipant) are **local to a single node's in-memory store**. They return only what that specific node knows about.
 
-**Key implication for host controls:** Do NOT use `getParticipant()` to verify a caller's role before kick/mute. The caller may be on a different node, causing a 404. Instead, pass `callerRole` from the client (the role was embedded in the JWT by your server, so it is trustworthy).
+**Key implication for host controls:** Do NOT use `getParticipant()` to verify a caller's role before kick/mute. The caller may be on a different node, causing a 404. Instead, the client sends its access token (`Authorization: Bearer <token>`) and the backend verifies it with `TokenVerifier`, taking the role and room from the signed claims (see `lib/require-host.ts`). Never authorize from a role sent in the request body — any client can send `"host"`.
 
 ---
 
@@ -134,20 +135,21 @@ export async function joinRoom(room: string, identity: string, role: string): Pr
   return res.json();
 }
 
-export async function kickParticipant(room: string, identity: string, callerRole: string): Promise<void> {
+// `token` is the caller's own access token (from /api/join) — the backend verifies it
+export async function kickParticipant(token: string, identity: string): Promise<void> {
   const res = await fetch('/api/kick', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ room, identity, callerRole }),
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ identity }),
   });
   if (!res.ok) throw new Error((await res.json()).error || 'Failed to kick');
 }
 
-export async function muteParticipant(room: string, identity: string, trackSid: string, callerRole: string): Promise<void> {
+export async function muteParticipant(token: string, identity: string, trackSid: string): Promise<void> {
   const res = await fetch('/api/mute', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ room, identity, trackSid, callerRole }),
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ identity, trackSid }),
   });
   if (!res.ok) throw new Error((await res.json()).error || 'Failed to mute');
 }
@@ -175,6 +177,32 @@ export async function getRoomService(): Promise<RoomServiceClient> {
 }
 ```
 
+```typescript
+// lib/require-host.ts
+import { TokenVerifier } from '@dtelecom/server-sdk-js';
+import { NextRequest, NextResponse } from 'next/server';
+
+// Verifies the caller's access token and returns the room it hosts.
+// Role and room come from the signed token — never from the request body.
+export function requireHost(req: NextRequest): { room: string } | NextResponse {
+  const token = req.headers.get('authorization')?.replace(/^Bearer /, '') ?? '';
+  let claims;
+  try {
+    claims = new TokenVerifier(process.env.API_KEY!).verify(token); // checks signature, issuer, expiry
+  } catch {
+    return NextResponse.json({ error: 'Invalid or missing access token' }, { status: 401 });
+  }
+
+  let role: string | undefined;
+  try { role = JSON.parse(claims.metadata || '{}').role; } catch {}
+  const room = claims.video?.room;
+  if (role !== 'host' || !room) {
+    return NextResponse.json({ error: 'Only hosts can do this' }, { status: 403 });
+  }
+  return { room };
+}
+```
+
 ---
 
 ## API Routes
@@ -182,6 +210,8 @@ export async function getRoomService(): Promise<RoomServiceClient> {
 ### 1. Join Room — `app/api/join/route.ts`
 
 Creates a token with role metadata embedded, resolves wsUrl from Solana.
+
+> **Demo shortcut — not for production:** this route accepts `role` from the client, so anyone can request a host token (there is no sign-in in this app). In production your server must decide the role itself — e.g. from your authenticated user/session or a room-ownership record — and never take it from the request body.
 
 ```typescript
 import { AccessToken } from '@dtelecom/server-sdk-js';
@@ -250,26 +280,25 @@ export async function POST(req: NextRequest) {
 
 ### 3. Kick Participant — `app/api/kick/route.ts`
 
-Removes a participant. Backend verifies the caller's role from the request (not via `getParticipant()` which is local-only).
+Removes a participant. Backend verifies the caller's access token and takes role + room from its claims (not via `getParticipant()` which is local-only).
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server';
 import { getRoomService } from '@/lib/room-service';
+import { requireHost } from '@/lib/require-host';
 
 export async function POST(req: NextRequest) {
-  const { room, identity, callerRole } = await req.json();
+  const host = requireHost(req);
+  if (host instanceof NextResponse) return host;
 
-  if (!room || !identity || !callerRole) {
-    return NextResponse.json({ error: 'room, identity, and callerRole are required' }, { status: 400 });
-  }
-
-  if (callerRole !== 'host') {
-    return NextResponse.json({ error: 'Only hosts can kick participants' }, { status: 403 });
+  const { identity } = await req.json();
+  if (!identity) {
+    return NextResponse.json({ error: 'identity is required' }, { status: 400 });
   }
 
   // RemoveParticipant broadcasts via P2P — works from any node
   const client = await getRoomService();
-  await client.removeParticipant(room, identity);
+  await client.removeParticipant(host.room, identity);
   return NextResponse.json({ success: true });
 }
 ```
@@ -278,26 +307,25 @@ export async function POST(req: NextRequest) {
 
 ### 4. Mute Participant — `app/api/mute/route.ts`
 
-Mutes a participant's track. Backend verifies the caller's role.
+Mutes a participant's track. Backend verifies the caller's access token.
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server';
 import { getRoomService } from '@/lib/room-service';
+import { requireHost } from '@/lib/require-host';
 
 export async function POST(req: NextRequest) {
-  const { room, identity, trackSid, callerRole } = await req.json();
+  const host = requireHost(req);
+  if (host instanceof NextResponse) return host;
 
-  if (!room || !identity || !trackSid || !callerRole) {
-    return NextResponse.json({ error: 'room, identity, trackSid, and callerRole are required' }, { status: 400 });
-  }
-
-  if (callerRole !== 'host') {
-    return NextResponse.json({ error: 'Only hosts can mute participants' }, { status: 403 });
+  const { identity, trackSid } = await req.json();
+  if (!identity || !trackSid) {
+    return NextResponse.json({ error: 'identity and trackSid are required' }, { status: 400 });
   }
 
   // MutePublishedTrack broadcasts via P2P — works from any node
   const client = await getRoomService();
-  await client.mutePublishedTrack(room, identity, trackSid, true);
+  await client.mutePublishedTrack(host.room, identity, trackSid, true);
   return NextResponse.json({ success: true });
 }
 ```
@@ -485,7 +513,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomName: strin
         alert('Could not access camera or microphone. Please check permissions.');
       }}
     >
-      <ConferenceRoom roomName={roomName} />
+      <ConferenceRoom roomName={roomName} token={session.token} />
     </LiveKitRoom>
   );
 }
@@ -518,7 +546,7 @@ import ConnectionStateOverlay from './ConnectionStateOverlay';
 
 type SidebarTab = 'none' | 'participants' | 'chat';
 
-export default function ConferenceRoom({ roomName }: { roomName: string }) {
+export default function ConferenceRoom({ roomName, token }: { roomName: string; token: string }) {
   const [sidebar, setSidebar] = useState<SidebarTab>('none');
   const tracks = useTracks(
     [
@@ -546,7 +574,7 @@ export default function ConferenceRoom({ roomName }: { roomName: string }) {
       </div>
 
       {sidebar === 'participants' && (
-        <ParticipantListPanel roomName={roomName} onClose={() => setSidebar('none')} />
+        <ParticipantListPanel token={token} onClose={() => setSidebar('none')} />
       )}
       {sidebar === 'chat' && (
         <ChatPanel onClose={() => setSidebar('none')} />
@@ -589,7 +617,7 @@ export default function CustomControlBar({ roomName, onToggleParticipants, onTog
 
 ### 3. ParticipantListPanel — `components/ParticipantListPanel.tsx`
 
-Lists all participants. Hosts see kick/mute buttons. Uses `participant.getTrack(Track.Source.Microphone)` to check audio state. Passes `callerRole` to backend for verification.
+Lists all participants. Hosts see kick/mute buttons. Uses `participant.getTrack(Track.Source.Microphone)` to check audio state. Sends the participant's access token to the backend, which verifies it.
 
 ```tsx
 'use client';
@@ -602,11 +630,11 @@ import type { ParticipantMeta } from '@/lib/types';
 import { kickParticipant, muteParticipant } from '@/lib/api';
 
 interface Props {
-  roomName: string;
+  token: string; // this participant's access token — the backend verifies it for kick/mute
   onClose: () => void;
 }
 
-export default function ParticipantListPanel({ roomName, onClose }: Props) {
+export default function ParticipantListPanel({ token, onClose }: Props) {
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
 
@@ -617,7 +645,7 @@ export default function ParticipantListPanel({ roomName, onClose }: Props) {
   async function handleKick(identity: string) {
     if (!confirm(`Remove ${identity} from the room?`)) return;
     try {
-      await kickParticipant(roomName, identity, localMeta.role);
+      await kickParticipant(token, identity);
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Failed to kick participant');
     }
@@ -625,7 +653,7 @@ export default function ParticipantListPanel({ roomName, onClose }: Props) {
 
   async function handleMute(identity: string, trackSid: string) {
     try {
-      await muteParticipant(roomName, identity, trackSid, localMeta.role);
+      await muteParticipant(token, identity, trackSid);
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Failed to mute participant');
     }
@@ -780,7 +808,7 @@ export default function ShareInviteButton({ roomName }: { roomName: string }) {
 
 The host controls pattern flows through three layers:
 
-### 1. Token creation (server-side) — embed role in metadata
+### 1. Token creation (server-side) — your server decides the role, embeds it in metadata
 
 ```typescript
 const metadata = JSON.stringify({ role: 'host' }); // or 'guest'
@@ -793,24 +821,23 @@ const at = new AccessToken(apiKey, apiSecret, { identity, name, metadata });
 const { localParticipant } = useLocalParticipant();
 const meta = JSON.parse(localParticipant.metadata || '{}');
 const isHost = meta.role === 'host';
-// Use isHost to conditionally render kick/mute buttons
-// Pass meta.role as callerRole to backend API calls
+// Use isHost to conditionally render kick/mute buttons (UI only)
+// Send the access token to backend API calls: Authorization: `Bearer ${token}`
 ```
 
-### 3. Backend verifies callerRole before privileged actions
+### 3. Backend verifies the access token before privileged actions
 
 ```typescript
-// In your API route (e.g. /api/kick)
-const { room, identity, callerRole } = await req.json();
-if (callerRole !== 'host') {
-  return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-}
+// In your API route (e.g. /api/kick) — see lib/require-host.ts
+const host = requireHost(req);            // 401 bad/missing token, 403 not a host
+if (host instanceof NextResponse) return host;
+const { identity } = await req.json();
 // Write ops broadcast via P2P — work from any node
 const client = await getRoomService();
-await client.removeParticipant(room, identity);
+await client.removeParticipant(host.room, identity);  // room from the signed token
 ```
 
-**Why not `getParticipant()` for verification?** Because it's a local read — only checks the current node's in-memory store. The caller may be on a different node, causing a 404. The role in `callerRole` was embedded in the JWT by your server during token creation, so it is trustworthy.
+**Why not `getParticipant()` for verification?** Because it's a local read — only checks the current node's in-memory store. The caller may be on a different node, causing a 404. Verifying the access token needs no node lookup: its signature proves your server issued it, so the role and room inside it can be trusted. A role sent as a plain request-body field cannot.
 
 ---
 

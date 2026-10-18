@@ -509,26 +509,37 @@ Note: `send` from `useChat()` may be `undefined` before the room connection is e
 
 For host controls (kick/mute), embed role in token metadata and verify server-side.
 
-IMPORTANT: Do NOT use `getParticipant()` to verify the caller — it is a local read that only checks the current node's in-memory store. In dTelecom's decentralized network, the caller may be on a different node, causing a 404. Instead, pass `callerRole` from the client (the role was set in the JWT by your own server, so it is trustworthy).
+IMPORTANT: Do NOT use `getParticipant()` to verify the caller — it is a local read that only checks the current node's in-memory store. In dTelecom's decentralized network, the caller may be on a different node, causing a 404. Instead, the client sends its access token (`Authorization: Bearer <token>`) and the backend verifies it with `TokenVerifier`, taking the role and room from the signed claims. NEVER authorize from a role sent in the request body — any client can send `"host"`.
 
 ```typescript
-// 1. Server: embed role in token metadata
+// 1. Server: decide the role yourself (e.g. from your auth/session or room ownership) — never from the request body
 const metadata = JSON.stringify({ role: 'host' }); // or 'guest'
 const at = new AccessToken(apiKey, apiSecret, { identity, name, metadata });
 at.addGrant({ roomJoin: true, room, canPublish: true, canSubscribe: true, canPublishData: true });
 
-// 2. Client: read role from metadata (for UI only), pass callerRole to backend
+// 2. Client: read role from metadata (for UI only); send the access token to your backend
 import { useLocalParticipant } from '@dtelecom/components-react';
 const { localParticipant } = useLocalParticipant();
 const meta = JSON.parse(localParticipant.metadata || '{}');
 const isHost = meta.role === 'host';
-// When calling kick/mute API, pass callerRole: meta.role
+// When calling kick/mute API: headers: { Authorization: `Bearer ${token}` }, body: { identity }
 
-// 3. Backend: verify callerRole before privileged actions
-const { room, identity, callerRole } = await req.json();
-if (callerRole !== 'host') {
+// 3. Backend: verify the token; role and room come from its signed claims
+import { TokenVerifier } from '@dtelecom/server-sdk-js';
+const token = req.headers.get('authorization')?.replace(/^Bearer /, '') ?? '';
+let claims;
+try {
+  claims = new TokenVerifier(process.env.API_KEY!).verify(token); // checks signature, issuer, expiry
+} catch {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
+let role: string | undefined;
+try { role = JSON.parse(claims.metadata || '{}').role; } catch {}
+const room = claims.video?.room;
+if (role !== 'host' || !room) {
   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 }
+const { identity } = await req.json();
 // Write operations (removeParticipant, mutePublishedTrack) broadcast via P2P — they work from any node
 const client = await getRoomService();
 await client.removeParticipant(room, identity);  // kick
@@ -649,5 +660,6 @@ Avoid these frequent errors:
 9. WRONG: Building a custom chat from scratch with `publishData` → Use the built-in `<Chat>` component or `useChat` hook from `@dtelecom/components-react`.
 10. WRONG: Calling `RoomServiceClient` from frontend code → Server SDK must only be used server-side (API routes). The frontend should call your API routes, which then call the server SDK.
 11. WRONG: Hardcoding an API host URL for `RoomServiceClient` → Use `getApiUrl()` to dynamically obtain the `https://` endpoint.
+12. WRONG: Authorizing kick/mute from a role sent in the request body (e.g. `callerRole`) or letting the client choose its role at token creation → The server decides the role; privileged routes verify the caller's access token with `TokenVerifier` and use the role and room from its claims.
 
 </common_mistakes>
