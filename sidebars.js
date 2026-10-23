@@ -11,6 +11,7 @@ module.exports = {
       items: [
         'guides/getting-started',
         'guides/0a-architecture',
+        'guides/ai-services',
         'guides/access-tokens',
         'guides/server-api',
         'guides/webhooks',

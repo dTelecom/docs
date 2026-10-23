@@ -9,7 +9,7 @@
 - Pricing: https://www.dtelecom.org/pricing
 - LiveKit alternative: https://www.dtelecom.org/livekit-alternative
 - AI voice agent SDK: https://www.dtelecom.org/ai-voice-agent-sdk
-- Agent-payable WebRTC/STT/TTS gateway: https://x402.dtelecom.org/llms.txt
+- Agent-payable communication and AI service gateway: https://x402.dtelecom.org/llms.txt
 - Gateway API docs: https://x402.dtelecom.org/docs.md
 
 ## Key Differences from LiveKit
@@ -678,3 +678,16 @@ The webhook URL is configured per-token via `webHookURL` in `AccessTokenOptions`
 - Client SDK: https://github.com/dTelecom/client-sdk-js
 - React Components: https://github.com/dTelecom/components-js
 - Cloud Dashboard: https://cloud.dtelecom.org
+
+
+## Gateway communication and AI services
+
+Use [the x402 gateway service guide](https://docs.dtelecom.org/guides/ai-services) for WebRTC sessions, streaming STT/TTS, translation, file transcription with diarization, text/SSML-to-WAV, vision snapshots and audio/image moderation. These APIs use prepaid credits and wallet signatures; ordinary room SDK credentials are a separate integration.
+
+- [Current rates and enabled services](https://x402.dtelecom.org/v1/pricing)
+- [Complete API contracts, limits and speech controls](https://x402.dtelecom.org/docs.md)
+- [OpenAPI specification](https://x402.dtelecom.org/openapi.json)
+- [Gateway TypeScript SDK](https://github.com/dTelecom/x402-client)
+- [Live voice-agent framework](https://github.com/dTelecom/agents-js)
+
+Partials, Smart Turn and watermarking are independent explicit options. SSML uses the complete-document dtelecom-ssml-v1 subset. File/WAV jobs are separate from live speech sessions. Moderation analyzes caller-supplied media and does not automatically mute or remove room participants.

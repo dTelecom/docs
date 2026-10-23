@@ -19,7 +19,7 @@ dTelecom is an open source project that provides scalable, multi-user conferenci
 - [prompt.txt](https://docs.dtelecom.org/prompt.txt) — system prompt for AI agents
 - [docs.md](https://docs.dtelecom.org/docs.md) — all pages as individual .md files
 - [www.dtelecom.org/llms.txt](https://www.dtelecom.org/llms.txt) — canonical company and product overview
-- [x402.dtelecom.org/llms.txt](https://x402.dtelecom.org/llms.txt) — agent-payable WebRTC, STT, and TTS gateway context
+- [x402.dtelecom.org/llms.txt](https://x402.dtelecom.org/llms.txt) — agent-payable WebRTC, speech, translation, file/WAV, vision and moderation context
 - [dTelecom Meet](https://github.com/dTelecom/dtelecom-meet) — example app created 100% by AI agent ([demo](https://dtelecom-meet-demo.vercel.app/))
 
 ## Features
@@ -50,3 +50,16 @@ dTelecom is an open source project that provides scalable, multi-user conferenci
   ]
 })}
 </script>
+
+
+## Gateway communication and AI services
+
+Use [the x402 gateway service guide](https://docs.dtelecom.org/guides/ai-services) for WebRTC sessions, streaming STT/TTS, translation, file transcription with diarization, text/SSML-to-WAV, vision snapshots and audio/image moderation. These APIs use prepaid credits and wallet signatures; ordinary room SDK credentials are a separate integration.
+
+- [Current rates and enabled services](https://x402.dtelecom.org/v1/pricing)
+- [Complete API contracts, limits and speech controls](https://x402.dtelecom.org/docs.md)
+- [OpenAPI specification](https://x402.dtelecom.org/openapi.json)
+- [Gateway TypeScript SDK](https://github.com/dTelecom/x402-client)
+- [Live voice-agent framework](https://github.com/dTelecom/agents-js)
+
+Partials, Smart Turn and watermarking are independent explicit options. SSML uses the complete-document dtelecom-ssml-v1 subset. File/WAV jobs are separate from live speech sessions. Moderation analyzes caller-supplied media and does not automatically mute or remove room participants.

@@ -663,3 +663,16 @@ Avoid these frequent errors:
 12. WRONG: Authorizing kick/mute from a role sent in the request body (e.g. `callerRole`) or letting the client choose its role at token creation → The server decides the role; privileged routes verify the caller's access token with `TokenVerifier` and use the role and room from its claims.
 
 </common_mistakes>
+
+
+## Gateway communication and AI services
+
+Use [the x402 gateway service guide](https://docs.dtelecom.org/guides/ai-services) for WebRTC sessions, streaming STT/TTS, translation, file transcription with diarization, text/SSML-to-WAV, vision snapshots and audio/image moderation. These APIs use prepaid credits and wallet signatures; ordinary room SDK credentials are a separate integration.
+
+- [Current rates and enabled services](https://x402.dtelecom.org/v1/pricing)
+- [Complete API contracts, limits and speech controls](https://x402.dtelecom.org/docs.md)
+- [OpenAPI specification](https://x402.dtelecom.org/openapi.json)
+- [Gateway TypeScript SDK](https://github.com/dTelecom/x402-client)
+- [Live voice-agent framework](https://github.com/dTelecom/agents-js)
+
+Partials, Smart Turn and watermarking are independent explicit options. SSML uses the complete-document dtelecom-ssml-v1 subset. File/WAV jobs are separate from live speech sessions. Moderation analyzes caller-supplied media and does not automatically mute or remove room participants.

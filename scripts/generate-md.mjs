@@ -14,6 +14,7 @@ const BUILD_DIR = join(dirname(new URL(import.meta.url).pathname), "..", "build"
 
 // Map of source files → output paths (relative to build/)
 const pages = [
+  { src: "guides/ai-services.md", out: "guides/ai-services.md" },
   { src: "index.mdx", out: "index.md" },
   { src: "guides/0-getting-started.mdx", out: "guides/getting-started.md" },
   { src: "guides/0a-architecture.mdx", out: "guides/architecture.md" },

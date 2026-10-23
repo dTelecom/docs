@@ -6,7 +6,7 @@ For complete content in a single file: [/llms-full.txt](https://docs.dtelecom.or
 For AI system prompt: [/prompt.txt](https://docs.dtelecom.org/prompt.txt)
 All pages as markdown index: [/docs.md](https://docs.dtelecom.org/docs.md)
 Canonical company/product overview: [www.dtelecom.org/llms.txt](https://www.dtelecom.org/llms.txt)
-Agent-payable WebRTC/STT/TTS gateway: [x402.dtelecom.org/llms.txt](https://x402.dtelecom.org/llms.txt)
+Agent-payable communication and AI service gateway: [x402.dtelecom.org/llms.txt](https://x402.dtelecom.org/llms.txt)
 Conference app blueprint (full code + architecture): [CONFERENCE_APP_PLAN.md](https://github.com/dTelecom/docs/blob/main/CONFERENCE_APP_PLAN.md)
 Example app created 100% by AI agent: [dTelecom Meet](https://github.com/dTelecom/dtelecom-meet) | [Live Demo](https://dtelecom-meet-demo.vercel.app/)
 
@@ -44,3 +44,16 @@ Example app created 100% by AI agent: [dTelecom Meet](https://github.com/dTeleco
 - `@dtelecom/livekit-client` — Client: Room, RoomEvent, Track (vanilla JS/TS)
 - `@dtelecom/components-react` — React: LiveKitRoom, VideoConference, PreJoin, Chat, GridLayout, useChat, useParticipants
 - `@dtelecom/components-styles` — CSS styles for React components
+
+
+## Gateway communication and AI services
+
+Use [the x402 gateway service guide](https://docs.dtelecom.org/guides/ai-services) for WebRTC sessions, streaming STT/TTS, translation, file transcription with diarization, text/SSML-to-WAV, vision snapshots and audio/image moderation. These APIs use prepaid credits and wallet signatures; ordinary room SDK credentials are a separate integration.
+
+- [Current rates and enabled services](https://x402.dtelecom.org/v1/pricing)
+- [Complete API contracts, limits and speech controls](https://x402.dtelecom.org/docs.md)
+- [OpenAPI specification](https://x402.dtelecom.org/openapi.json)
+- [Gateway TypeScript SDK](https://github.com/dTelecom/x402-client)
+- [Live voice-agent framework](https://github.com/dTelecom/agents-js)
+
+Partials, Smart Turn and watermarking are independent explicit options. SSML uses the complete-document dtelecom-ssml-v1 subset. File/WAV jobs are separate from live speech sessions. Moderation analyzes caller-supplied media and does not automatically mute or remove room participants.
