@@ -7,17 +7,17 @@ The [x402 gateway](https://x402.dtelecom.org/) provides one prepaid wallet-authe
 
 | Service | USD rate | Billing unit |
 |---|---:|---|
-| WebRTC | $0.001 | audio participant minute |
+| WebRTC | $0.0001 | audio participant minute |
 | Streaming STT | $0.004 | connected STT session minute |
 | Streaming TTS | $0.006 | 1,000 spoken Unicode code points |
-| File transcription + diarization | $0.003 | decoded minute, rounded once to started seconds |
+| File transcription + diarization | $0.002 | decoded minute, rounded once to started seconds |
 | Text/SSML to WAV | $0.006 | 1,000 expanded spoken Unicode code points |
 | Translation | $5 | million input Unicode code points |
-| Vision | $0.002 | completed snapshot |
+| Vision | $0.001 | completed snapshot |
 | Audio moderation | $0.004 | submitted audio minute |
 | Image/frame moderation | $0.0005 | completed frame |
 
-Minimum credit purchase is $0.10. Two audio participants, one STT session and 500 TTS characters/minute cost $0.009/minute excluding the LLM. This is a usage example, not a flat bundle price. WebRTC bandwidth subscriptions are separate. [Live pricing](https://x402.dtelecom.org/v1/pricing) is authoritative.
+Minimum credit purchase is $0.10. Two audio participants, one STT session and 367 TTS characters/minute cost approximately $0.0064/minute excluding the LLM. This is a usage example, not a flat bundle price. [Live pricing](https://x402.dtelecom.org/v1/pricing) is authoritative.
 
 ## Pick the integration
 
