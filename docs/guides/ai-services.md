@@ -19,6 +19,36 @@ The [x402 gateway](https://x402.dtelecom.org/) provides one prepaid wallet-authe
 
 Minimum credit purchase is $0.10. Two audio participants, one STT session and 367 TTS characters/minute cost approximately $0.0064/minute excluding the LLM. This is a usage example, not a flat bundle price. [Live pricing](https://x402.dtelecom.org/v1/pricing) is authoritative.
 
+## Buy credits with TRON USDT
+
+Send a `POST` request to `/v1/credits/purchase/tron` to buy credits with USDT on TRON mainnet. The gateway advertises x402 v2 `exact` with Permit2. Credits are assigned to the wallet that signs the payment, and a successful purchase returns `tron_tx_hash`. See the [TRON purchase API](https://x402.dtelecom.org/docs.md#post-v1creditspurchasetron).
+
+Install Wallet CLI 4.16.0 and configure a TRON account using the [Wallet CLI quickstart](https://docs.bankofai.io/wallet-cli/quickstart/). Then preview a 0.10 USDT top-up.
+
+```bash
+npm install -g @tron-walletcli/wallet-cli@4.16.0
+
+wallet-cli x402 pay https://x402.dtelecom.org/v1/credits/purchase/tron \
+  --method POST \
+  --header 'Content-Type: application/json' \
+  --body '{"amount_usd":0.1}' \
+  --network tron:728126428 \
+  --token USDT \
+  --scheme exact \
+  --max-amount 0.1 \
+  --dry-run -o json
+```
+
+To make the payment, replace `--dry-run` with `--password-stdin` and supply the Wallet CLI master password through standard input. A wallet's first Permit2 approval may require TRX. See the [Wallet CLI payment options](https://docs.bankofai.io/wallet-cli/command-reference/#payment-options).
+
+For TypeScript buyers, install the Bank of AI TRON mechanism with the matching x402 Foundation Core and fetch packages.
+
+```bash
+npm install @bankofai/x402-tron@2.1.2 @x402/core@2.29.0 @x402/fetch@2.29.0
+```
+
+Follow the [Bank of AI TypeScript quickstart](https://docs.bankofai.io/x402/getting-started/quickstart-for-human/) to configure a TRON signer, then send the same JSON POST through the payment-enabled fetch client. To spend the credits, sign gateway API requests with the paying TRON wallet and set `X-Wallet-Chain: tron`. See [wallet authentication](https://x402.dtelecom.org/docs.md#authentication).
+
 ## Pick the integration
 
 - **Live voice agents:** [agents-js](https://github.com/dTelecom/agents-js) with gateway tokens. Parakeet Ultra/Whisper STT takes 16 kHz mono PCM16; Kokoro/Supertonic TTS produces 48 kHz mono PCM16. Partials update temporary chat text; finals start LLM turns. Smart Turn independently judges pauses; check active/fallback readiness and supply continuous silence during Opus DTX (server-sdk-node 0.2.6+).
