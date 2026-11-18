@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" role="img" aria-label="A voice agent receives speech from the room, sends it through Speech-to-Text, an LLM and Text-to-Speech, and publishes the answer back.">
+<rect x="16" y="16" width="200" height="328" rx="14" style="fill:none;stroke:var(--line,#dfe5e2);stroke-width:1.5;stroke-dasharray:5 5"/>
+<text x="32" y="38" style="font:500 10.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);letter-spacing:.09em;fill:var(--dim,#5c6862)">ROOM</text>
+<rect x="280" y="16" width="200" height="328" rx="14" style="fill:none;stroke:var(--line,#dfe5e2);stroke-width:1.5;stroke-dasharray:5 5"/>
+<text x="296" y="38" style="font:500 10.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);letter-spacing:.09em;fill:var(--dim,#5c6862)">YOUR SERVER</text>
+<rect x="32" y="146" width="168" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="48" y="177.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Participant</text>
+<text x="48" y="195.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">microphone, speaker</text>
+<rect x="296" y="146" width="168" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="312" y="177.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Voice agent</text>
+<text x="312" y="195.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">@dtelecom/agents-js</text>
+<rect x="560" y="40" width="184" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="576" y="71.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Speech-to-Text</text>
+<text x="576" y="89.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">dTelecom</text>
+<rect x="560" y="146" width="184" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="576" y="177.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">LLM</text>
+<text x="576" y="195.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">your provider</text>
+<rect x="560" y="252" width="184" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="576" y="283.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Text-to-Speech</text>
+<text x="576" y="301.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">dTelecom</text>
+<path d="M200 166 L296 166" style="fill:none;stroke:var(--accent,#087a4d);stroke-width:2;stroke-linejoin:round"/>
+<polygon points="296.0,166.0 287.0,170.5 287.0,161.5" style="fill:var(--accent,#087a4d)"/>
+<circle cx="248" cy="166" r="10" style="fill:var(--bg,#ffffff);stroke:var(--text,#131715);stroke-width:1.5"/>
+<text x="248" y="170" text-anchor="middle" style="font:600 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">1</text>
+<text x="248" y="150" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--accent,#087a4d)">speech</text>
+<path d="M296 196 L200 196" style="fill:none;stroke:var(--accent,#087a4d);stroke-width:2;stroke-linejoin:round"/>
+<polygon points="200.0,196.0 209.0,191.5 209.0,200.5" style="fill:var(--accent,#087a4d)"/>
+<circle cx="248" cy="196" r="10" style="fill:var(--bg,#ffffff);stroke:var(--text,#131715);stroke-width:1.5"/>
+<text x="248" y="200" text-anchor="middle" style="font:600 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">5</text>
+<text x="248" y="222" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--accent,#087a4d)">answer</text>
+<path d="M350 146 L350 60 L560 60" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="560.0,60.0 551.0,64.5 551.0,55.5" style="fill:var(--dim,#5c6862)"/>
+<circle cx="350" cy="104" r="10" style="fill:var(--bg,#ffffff);stroke:var(--text,#131715);stroke-width:1.5"/>
+<text x="350" y="108" text-anchor="middle" style="font:600 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">2</text>
+<text x="488" y="52" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">audio 16 kHz</text>
+<path d="M560 90 L410 90 L410 146" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round;stroke-dasharray:4 4"/>
+<polygon points="410.0,146.0 405.5,137.0 414.5,137.0" style="fill:var(--dim,#5c6862)"/>
+<text x="488" y="106" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">transcript</text>
+<path d="M464 166 L560 166" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="560.0,166.0 551.0,170.5 551.0,161.5" style="fill:var(--dim,#5c6862)"/>
+<circle cx="512" cy="166" r="10" style="fill:var(--bg,#ffffff);stroke:var(--text,#131715);stroke-width:1.5"/>
+<text x="512" y="170" text-anchor="middle" style="font:600 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">3</text>
+<text x="512" y="150" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">text</text>
+<path d="M560 196 L464 196" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round;stroke-dasharray:4 4"/>
+<polygon points="464.0,196.0 473.0,191.5 473.0,200.5" style="fill:var(--dim,#5c6862)"/>
+<text x="512" y="216" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">answer</text>
+<path d="M410 214 L410 270 L560 270" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="560.0,270.0 551.0,274.5 551.0,265.5" style="fill:var(--dim,#5c6862)"/>
+<circle cx="410" cy="244" r="10" style="fill:var(--bg,#ffffff);stroke:var(--text,#131715);stroke-width:1.5"/>
+<text x="410" y="248" text-anchor="middle" style="font:600 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">4</text>
+<text x="488" y="262" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">sentences</text>
+<path d="M560 300 L350 300 L350 214" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round;stroke-dasharray:4 4"/>
+<polygon points="350.0,214.0 354.5,223.0 345.5,223.0" style="fill:var(--dim,#5c6862)"/>
+<text x="470" y="318" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">audio 48 kHz</text>
+</svg>

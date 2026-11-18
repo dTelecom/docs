@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" role="img" aria-label="In a livestream the host publishes to the room and viewers only receive; the difference is set in the tokens your backend issues.">
+<rect x="290" y="24" width="180" height="64" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="306" y="53.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Your backend</text>
+<text x="306" y="71.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">issues both tokens</text>
+<rect x="24" y="196" width="180" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="40" y="227.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Host</text>
+<text x="40" y="245.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">canPublish: true</text>
+<rect x="290" y="196" width="180" height="68" rx="10" style="fill:var(--accent-soft,#e2f6ec);stroke:var(--accent,#087a4d);stroke-width:1.5"/>
+<text x="306" y="227.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Room</text>
+<text x="306" y="245.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">media nodes</text>
+<rect x="568" y="208" width="180" height="68" rx="10" style="fill:var(--bg,#ffffff);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<rect x="562" y="202" width="180" height="68" rx="10" style="fill:var(--bg,#ffffff);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<rect x="556" y="196" width="180" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="572" y="227.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Viewers</text>
+<text x="572" y="245.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">canPublish: false</text>
+<path d="M290 56 L114 56 L114 196" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round;stroke-dasharray:4 4"/>
+<polygon points="114.0,196.0 109.5,187.0 118.5,187.0" style="fill:var(--dim,#5c6862)"/>
+<text x="196" y="46" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">host token</text>
+<path d="M470 56 L646 56 L646 196" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round;stroke-dasharray:4 4"/>
+<polygon points="646.0,196.0 641.5,187.0 650.5,187.0" style="fill:var(--dim,#5c6862)"/>
+<text x="566" y="46" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">viewer token</text>
+<path d="M204 230 L290 230" style="fill:none;stroke:var(--accent,#087a4d);stroke-width:2;stroke-linejoin:round"/>
+<polygon points="290.0,230.0 281.0,234.5 281.0,225.5" style="fill:var(--accent,#087a4d)"/>
+<text x="247" y="186" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--accent,#087a4d)">camera,</text>
+<text x="247" y="200" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--accent,#087a4d)">mic</text>
+<path d="M470 216 L556 216" style="fill:none;stroke:var(--accent,#087a4d);stroke-width:2;stroke-linejoin:round"/>
+<polygon points="556.0,216.0 547.0,220.5 547.0,211.5" style="fill:var(--accent,#087a4d)"/>
+<text x="513" y="204" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--accent,#087a4d)">media</text>
+<path d="M556 246 L470 246" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="470.0,246.0 479.0,241.5 479.0,250.5" style="fill:var(--dim,#5c6862)"/>
+<text x="513" y="266" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">chat</text>
+<text x="380" y="306" text-anchor="middle" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">a viewer token cannot publish media, whatever the client does</text>
+</svg>

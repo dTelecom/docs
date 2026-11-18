@@ -1,0 +1,79 @@
+{
+  "name": "dTelecom Cloud",
+  "navigation": [
+    {
+      "group": "Get started",
+      "pages": [
+        "index",
+        "quickstart"
+      ]
+    },
+    {
+      "group": "Concepts",
+      "pages": [
+        "concepts/how-it-works",
+        "concepts/authentication"
+      ]
+    },
+    {
+      "group": "Guides",
+      "pages": [
+        "guides/voice-agent",
+        "guides/video-conference-react",
+        "guides/livestreaming",
+        "guides/live-captions",
+        "guides/server-side-media",
+        "guides/latency"
+      ]
+    },
+    {
+      "group": "Rooms",
+      "pages": [
+        "rooms/overview",
+        "rooms/tokens",
+        "rooms/connect",
+        "rooms/data",
+        "rooms/manage-rooms",
+        "rooms/webhooks"
+      ]
+    },
+    {
+      "group": "AI services",
+      "pages": [
+        "ai/overview",
+        "ai/speech-to-text",
+        "ai/transcription",
+        "ai/text-to-speech",
+        "ai/ssml",
+        "ai/translation",
+        "ai/vision",
+        "ai/moderation",
+        "ai/languages-and-voices"
+      ]
+    },
+    {
+      "group": "Platform",
+      "pages": [
+        "platform/dashboard",
+        "platform/billing",
+        "platform/limits",
+        "platform/errors",
+        "platform/security",
+        "platform/faq"
+      ]
+    },
+    {
+      "group": "Reference",
+      "pages": [
+        "reference/server-sdk",
+        "reference/http-api",
+        "reference/agents-sdk",
+        "reference/sdks",
+        "reference/examples",
+        "reference/llm-resources",
+        "reference/cloud-and-x402",
+        "reference/migrate-from-3x"
+      ]
+    }
+  ]
+}

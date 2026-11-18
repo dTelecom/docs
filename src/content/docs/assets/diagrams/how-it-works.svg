@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" role="img" aria-label="Your backend gets a token from the Cloud API and passes it to the client; the client connects to a media node.">
+<rect x="16" y="16" width="268" height="368" rx="14" style="fill:none;stroke:var(--line,#dfe5e2);stroke-width:1.5;stroke-dasharray:5 5"/>
+<text x="32" y="38" style="font:500 10.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);letter-spacing:.09em;fill:var(--dim,#5c6862)">YOUR APP</text>
+<rect x="476" y="16" width="268" height="368" rx="14" style="fill:none;stroke:var(--line,#dfe5e2);stroke-width:1.5;stroke-dasharray:5 5"/>
+<text x="492" y="38" style="font:500 10.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);letter-spacing:.09em;fill:var(--dim,#5c6862)">DTELECOM CLOUD</text>
+<rect x="40" y="60" width="220" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="56" y="91.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Your backend</text>
+<text x="56" y="109.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">server SDK + API key</text>
+<rect x="40" y="292" width="220" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="56" y="323.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Client</text>
+<text x="56" y="341.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">browser, mobile app, agent</text>
+<rect x="500" y="60" width="220" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="516" y="91.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Cloud API</text>
+<text x="516" y="109.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">tokens, usage, billing</text>
+<rect x="500" y="176" width="220" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="516" y="207.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">AI services</text>
+<text x="516" y="225.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">speech, translation, vision</text>
+<rect x="500" y="292" width="220" height="68" rx="10" style="fill:var(--accent-soft,#e2f6ec);stroke:var(--accent,#087a4d);stroke-width:1.5"/>
+<text x="516" y="323.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Media node</text>
+<text x="516" y="341.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">nearest to the participant</text>
+<path d="M72 292 L72 128" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="72.0,128.0 76.5,137.0 67.5,137.0" style="fill:var(--dim,#5c6862)"/>
+<circle cx="72" cy="210" r="10" style="fill:var(--bg,#ffffff);stroke:var(--text,#131715);stroke-width:1.5"/>
+<text x="72" y="214" text-anchor="middle" style="font:600 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">1</text>
+<text x="88" y="214" text-anchor="start" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">asks to join</text>
+<path d="M260 82 L500 82" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="500.0,82.0 491.0,86.5 491.0,77.5" style="fill:var(--dim,#5c6862)"/>
+<circle cx="322" cy="82" r="10" style="fill:var(--bg,#ffffff);stroke:var(--text,#131715);stroke-width:1.5"/>
+<text x="322" y="86" text-anchor="middle" style="font:600 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">2</text>
+<text x="404" y="72" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">createToken()</text>
+<path d="M500 108 L260 108" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="260.0,108.0 269.0,103.5 269.0,112.5" style="fill:var(--dim,#5c6862)"/>
+<text x="392" y="124" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">token + wsUrl</text>
+<path d="M196 128 L196 292" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="196.0,292.0 191.5,283.0 200.5,283.0" style="fill:var(--dim,#5c6862)"/>
+<circle cx="196" cy="210" r="10" style="fill:var(--bg,#ffffff);stroke:var(--text,#131715);stroke-width:1.5"/>
+<text x="196" y="214" text-anchor="middle" style="font:600 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">3</text>
+<text x="212" y="214" text-anchor="start" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">token</text>
+<path d="M260 326 L500 326" style="fill:none;stroke:var(--accent,#087a4d);stroke-width:2;stroke-linejoin:round"/>
+<polygon points="500.0,326.0 491.0,330.5 491.0,321.5" style="fill:var(--accent,#087a4d)"/>
+<polygon points="260.0,326.0 269.0,321.5 269.0,330.5" style="fill:var(--accent,#087a4d)"/>
+<circle cx="322" cy="326" r="10" style="fill:var(--bg,#ffffff);stroke:var(--text,#131715);stroke-width:1.5"/>
+<text x="322" y="330" text-anchor="middle" style="font:600 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">4</text>
+<text x="400" y="314" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--accent,#087a4d)">audio, video, data</text>
+<path d="M610 128 L610 176" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="610.0,176.0 605.5,167.0 614.5,167.0" style="fill:var(--dim,#5c6862)"/>
+</svg>

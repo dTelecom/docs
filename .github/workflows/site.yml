@@ -1,0 +1,70 @@
+name: Site
+
+# Builds the docs on every push:
+#  - "production": the site for docs.dtelecom.org (base /), kept as the "docs-site" artifact
+#    to download and copy to the web server;
+#  - "pages": the same pages under /docs with noindex, deployed to
+#    https://dtelecom.github.io/docs/ for review.
+on:
+  push:
+    branches: [main, cloud-v2]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          ASTRO_TELEMETRY_DISABLED: 1
+      - uses: actions/upload-artifact@v7
+        with:
+          name: docs-site
+          path: dist/
+          retention-days: 30
+
+  pages:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          ASTRO_TELEMETRY_DISABLED: 1
+          DOCS_SITE: https://dtelecom.github.io
+          DOCS_BASE: /docs
+          DOCS_NOINDEX: 1
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist/
+
+  deploy-pages:
+    needs: pages
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

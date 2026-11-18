@@ -1,0 +1,87 @@
+---
+// The prototype header: logo for each theme, "Docs", search, Dashboard and GitHub links, theme switch.
+import Search from 'virtual:starlight/components/Search';
+import ThemeSelect from 'virtual:starlight/components/ThemeSelect';
+import logoLight from '../content/docs/assets/dtelecom-cloud-logo-for-light-bg.png';
+import logoDark from '../content/docs/assets/dtelecom-cloud-logo-for-dark-bg.png';
+
+const { siteTitleHref } = Astro.locals.starlightRoute;
+---
+
+<div class="header">
+	<a href={siteTitleHref} class="brand" aria-label="dTelecom Cloud Docs">
+		<img class="logo logo-on-light" src={logoLight.src} width="176" height="22" alt="" />
+		<img class="logo logo-on-dark" src={logoDark.src} width="176" height="22" alt="" />
+		<span class="docs">Docs</span>
+	</a>
+	<div class="search print:hidden"><Search /></div>
+	<div class="hlinks print:hidden">
+		<a class="hlink" href="https://cloud.dtelecom.org" target="_blank" rel="noopener">Dashboard</a>
+		<a class="hlink" href="https://github.com/dTelecom" target="_blank" rel="noopener">GitHub</a>
+		<ThemeSelect />
+	</div>
+</div>
+
+<style>
+	.header {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		height: 100%;
+	}
+	.brand {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		min-width: 0;
+		color: var(--text);
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	.logo {
+		display: block;
+		height: 22px;
+		width: auto;
+	}
+	.logo-on-dark {
+		display: none;
+	}
+	:global([data-theme='dark']) .logo-on-dark {
+		display: block;
+	}
+	:global([data-theme='dark']) .logo-on-light {
+		display: none;
+	}
+	.docs {
+		font-weight: 500;
+		font-size: 15px;
+		color: var(--dim);
+	}
+	.search {
+		margin-left: auto;
+		display: flex;
+	}
+	.hlinks {
+		display: flex;
+		align-items: center;
+		gap: 20px;
+	}
+	.hlink {
+		color: var(--dim);
+		font-size: 14px;
+		white-space: nowrap;
+		text-decoration: none;
+	}
+	.hlink:hover {
+		color: var(--text);
+	}
+	@media (max-width: 50rem) {
+		.hlinks,
+		.docs {
+			display: none;
+		}
+		.logo {
+			height: 18px;
+		}
+	}
+</style>

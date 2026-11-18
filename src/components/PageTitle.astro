@@ -1,0 +1,42 @@
+---
+// The prototype page head: the sidebar group as a breadcrumb, the title, the description as a lede.
+// Starlight's skip link and "Overview" TOC entry point at this id.
+const PAGE_TITLE_ID = '_top';
+
+const { entry, sidebar } = Astro.locals.starlightRoute;
+
+type Entry = { type: string; label: string; isCurrent?: boolean; entries?: Entry[] };
+const group = (sidebar as Entry[]).find((g) => g.type === 'group' && g.entries?.some((e) => e.isCurrent));
+---
+
+{group && <div class="crumb">{group.label}</div>}
+<h1 id={PAGE_TITLE_ID}>{entry.data.title}</h1>
+{entry.data.description && <p class="lede">{entry.data.description}</p>}
+
+<style>
+	.crumb {
+		font-size: 13px;
+		color: var(--dim);
+		margin-top: 0.25rem;
+	}
+	h1 {
+		margin: 8px 0 8px;
+		font-size: 34px;
+		line-height: 1.15;
+		letter-spacing: -0.02em;
+		font-weight: 700;
+		color: var(--text);
+		text-wrap: balance;
+	}
+	.lede {
+		font-size: 17.5px;
+		color: var(--dim);
+		margin: 0;
+		max-width: 62ch;
+	}
+	@media (max-width: 50rem) {
+		h1 {
+			font-size: 28px;
+		}
+	}
+</style>

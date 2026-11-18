@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" role="img" aria-label="AI services use three call styles: a single request, a job that you poll, and a prepaid streaming session.">
+<rect x="16" y="16" width="224" height="298" rx="14" style="fill:none;stroke:var(--line,#dfe5e2);stroke-width:1.5;stroke-dasharray:5 5"/>
+<text x="32" y="38" style="font:500 10.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);letter-spacing:.09em;fill:var(--dim,#5c6862)">REQUEST</text>
+<rect x="32" y="52" width="192" height="58" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="48" y="78.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">One call</text>
+<text x="48" y="96.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">with Idempotency-Key</text>
+<path d="M128 110 L128 132" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="128.0,132.0 123.5,123.0 132.5,123.0" style="fill:var(--dim,#5c6862)"/>
+<rect x="32" y="132" width="192" height="58" rx="10" style="fill:var(--accent-soft,#e2f6ec);stroke:var(--accent,#087a4d);stroke-width:1.5"/>
+<text x="48" y="158.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Result</text>
+<text x="48" y="176.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">in the response</text>
+<text x="128" y="300" text-anchor="middle" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">translation, vision, moderation</text>
+<rect x="268" y="16" width="224" height="298" rx="14" style="fill:none;stroke:var(--line,#dfe5e2);stroke-width:1.5;stroke-dasharray:5 5"/>
+<text x="284" y="38" style="font:500 10.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);letter-spacing:.09em;fill:var(--dim,#5c6862)">JOB</text>
+<rect x="284" y="52" width="192" height="58" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="300" y="78.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">create()</text>
+<text x="300" y="96.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">202, status running</text>
+<path d="M380 110 L380 132" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="380.0,132.0 375.5,123.0 384.5,123.0" style="fill:var(--dim,#5c6862)"/>
+<rect x="284" y="132" width="192" height="58" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="300" y="158.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">get()</text>
+<text x="300" y="176.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">poll until completed</text>
+<path d="M380 190 L380 212" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="380.0,212.0 375.5,203.0 384.5,203.0" style="fill:var(--dim,#5c6862)"/>
+<rect x="284" y="212" width="192" height="58" rx="10" style="fill:var(--accent-soft,#e2f6ec);stroke:var(--accent,#087a4d);stroke-width:1.5"/>
+<text x="300" y="238.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Result</text>
+<text x="300" y="256.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">kept for 24 hours</text>
+<text x="380" y="300" text-anchor="middle" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">file transcription, WAV</text>
+<rect x="520" y="16" width="224" height="298" rx="14" style="fill:none;stroke:var(--line,#dfe5e2);stroke-width:1.5;stroke-dasharray:5 5"/>
+<text x="536" y="38" style="font:500 10.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);letter-spacing:.09em;fill:var(--dim,#5c6862)">SESSION</text>
+<rect x="536" y="52" width="192" height="58" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="552" y="78.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">createSession()</text>
+<text x="552" y="96.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">token + streamUrl</text>
+<path d="M632 110 L632 132" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="632.0,132.0 627.5,123.0 636.5,123.0" style="fill:var(--dim,#5c6862)"/>
+<rect x="536" y="132" width="192" height="58" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="552" y="158.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">WebSocket</text>
+<text x="552" y="176.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">stream in real time</text>
+<path d="M632 190 L632 212" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="632.0,212.0 627.5,203.0 636.5,203.0" style="fill:var(--dim,#5c6862)"/>
+<rect x="536" y="212" width="192" height="58" rx="10" style="fill:var(--accent-soft,#e2f6ec);stroke:var(--accent,#087a4d);stroke-width:1.5"/>
+<text x="552" y="238.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Close</text>
+<text x="552" y="256.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">pay for what you used</text>
+<text x="632" y="300" text-anchor="middle" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">streaming STT and TTS</text>
+</svg>

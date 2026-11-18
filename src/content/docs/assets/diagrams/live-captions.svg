@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" role="img" aria-label="A caption bot listens to speakers, transcribes and translates their speech, and sends captions to viewers through the room service.">
+<rect x="16" y="16" width="200" height="328" rx="14" style="fill:none;stroke:var(--line,#dfe5e2);stroke-width:1.5;stroke-dasharray:5 5"/>
+<text x="32" y="38" style="font:500 10.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);letter-spacing:.09em;fill:var(--dim,#5c6862)">ROOM</text>
+<rect x="280" y="16" width="200" height="328" rx="14" style="fill:none;stroke:var(--line,#dfe5e2);stroke-width:1.5;stroke-dasharray:5 5"/>
+<text x="296" y="38" style="font:500 10.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);letter-spacing:.09em;fill:var(--dim,#5c6862)">YOUR SERVER</text>
+<rect x="32" y="52" width="168" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="48" y="83.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Speaker</text>
+<text x="48" y="101.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">publishes audio</text>
+<rect x="32" y="252" width="168" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="48" y="283.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Viewers</text>
+<text x="48" y="301.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">render captions</text>
+<rect x="296" y="146" width="168" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="312" y="177.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Caption bot</text>
+<text x="312" y="195.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">listen-only</text>
+<rect x="560" y="52" width="184" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="576" y="83.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Speech-to-Text</text>
+<text x="576" y="101.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">$0.004 / min</text>
+<rect x="560" y="252" width="184" height="68" rx="10" style="fill:var(--panel,#f5f7f6);stroke:var(--line,#dfe5e2);stroke-width:1.5"/>
+<text x="576" y="283.0" style="font:600 14px var(--font-body,'Onest','Helvetica Neue',Arial,sans-serif);fill:var(--text,#131715)">Translation</text>
+<text x="576" y="301.0" style="font:400 11px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--dim,#5c6862)">$0.005 / 1K chars</text>
+<path d="M200 86 L350 86 L350 146" style="fill:none;stroke:var(--accent,#087a4d);stroke-width:2;stroke-linejoin:round"/>
+<polygon points="350.0,146.0 345.5,137.0 354.5,137.0" style="fill:var(--accent,#087a4d)"/>
+<circle cx="248" cy="86" r="10" style="fill:var(--bg,#ffffff);stroke:var(--text,#131715);stroke-width:1.5"/>
+<text x="248" y="90" text-anchor="middle" style="font:600 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">1</text>
+<text x="300" y="76" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--accent,#087a4d)">audio</text>
+<path d="M410 146 L410 86 L560 86" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="560.0,86.0 551.0,90.5 551.0,81.5" style="fill:var(--dim,#5c6862)"/>
+<polygon points="410.0,146.0 405.5,137.0 414.5,137.0" style="fill:var(--dim,#5c6862)"/>
+<circle cx="410" cy="116" r="10" style="fill:var(--bg,#ffffff);stroke:var(--text,#131715);stroke-width:1.5"/>
+<text x="410" y="120" text-anchor="middle" style="font:600 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">2</text>
+<text x="492" y="76" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">transcript</text>
+<path d="M410 214 L410 286 L560 286" style="fill:none;stroke:var(--dim,#5c6862);stroke-width:1.5;stroke-linejoin:round"/>
+<polygon points="560.0,286.0 551.0,290.5 551.0,281.5" style="fill:var(--dim,#5c6862)"/>
+<polygon points="410.0,214.0 414.5,223.0 405.5,223.0" style="fill:var(--dim,#5c6862)"/>
+<circle cx="410" cy="250" r="10" style="fill:var(--bg,#ffffff);stroke:var(--text,#131715);stroke-width:1.5"/>
+<text x="410" y="254" text-anchor="middle" style="font:600 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">3</text>
+<text x="492" y="304" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">translations</text>
+<path d="M350 214 L350 286 L200 286" style="fill:none;stroke:var(--accent,#087a4d);stroke-width:2;stroke-linejoin:round"/>
+<polygon points="200.0,286.0 209.0,281.5 209.0,290.5" style="fill:var(--accent,#087a4d)"/>
+<circle cx="350" cy="250" r="10" style="fill:var(--bg,#ffffff);stroke:var(--text,#131715);stroke-width:1.5"/>
+<text x="350" y="254" text-anchor="middle" style="font:600 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--text,#131715)">4</text>
+<text x="268" y="304" text-anchor="middle" style="font:500 11.5px var(--font-mono,'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace);fill:var(--accent,#087a4d)">sendData()</text>
+</svg>
