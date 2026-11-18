@@ -14,6 +14,7 @@ Source of [docs.dtelecom.org](https://docs.dtelecom.org): plain Markdown pages b
 | `plugins/llms-files.mjs` | Writes `llms.txt`, `llms-full.txt`, a `.md` copy of every page and `robots.txt` after the build. |
 | `scripts/check-links.mjs` | Checks every internal link and anchor of the built site. Runs as part of `npm run build`. |
 | `tools/diagrams.py` | Draws the diagrams in `src/content/docs/assets/diagrams/`. |
+| `public/` | Files served as they are: the favicon and `og.png`, the link preview image (its source is `tools/og-image.html`). |
 | `astro.config.mjs` | Site settings, the sidebar from `navigation.json`, redirects from the old docs URLs. |
 
 ## Update the pages

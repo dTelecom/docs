@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- Source of public/og.png, the link preview image: open over a local web server from the repo root, screenshot the page at 1200x630. -->
+<style>
+  @font-face { font-family: Onest; font-weight: 400; src: url(../node_modules/@fontsource/onest/files/onest-latin-400-normal.woff2); }
+  @font-face { font-family: Onest; font-weight: 600; src: url(../node_modules/@fontsource/onest/files/onest-latin-600-normal.woff2); }
+  @font-face { font-family: JBM; font-weight: 400; src: url(../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2); }
+  html, body { margin: 0; }
+  body { width: 1200px; height: 630px; overflow: hidden; background: #0a0c0b; color: #e9eeeb; font-family: Onest, sans-serif; }
+  .frame { position: relative; box-sizing: border-box; width: 1200px; height: 630px; padding: 72px 80px; display: flex; flex-direction: column; }
+  .grid { position: absolute; inset: 0; background-image: linear-gradient(#171b19 1px, transparent 1px), linear-gradient(90deg, #171b19 1px, transparent 1px); background-size: 40px 40px; mask-image: radial-gradient(ellipse at 85% 30%, #000 0%, transparent 65%); -webkit-mask-image: radial-gradient(ellipse at 85% 30%, #000 0%, transparent 65%); }
+  .logo { position: relative; height: 52px; width: auto; align-self: flex-start; }
+  h1 { position: relative; margin: auto 0 0; font-weight: 600; font-size: 76px; line-height: 1.05; letter-spacing: -0.025em; }
+  p { position: relative; margin: 22px 0 0; max-width: 860px; font-size: 32px; line-height: 1.35; color: #8d9993; }
+  .foot { position: relative; margin-top: 44px; padding-top: 26px; border-top: 1px solid #232927; display: flex; justify-content: space-between; font: 400 22px JBM, monospace; color: #8d9993; }
+  .foot b { font-weight: 400; color: #14f195; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="grid"></div>
+  <img class="logo" src="../src/content/docs/assets/dtelecom-cloud-logo-for-dark-bg.png" alt="">
+  <h1>Developer docs</h1>
+  <p>Real-time voice, video and speech AI behind one API key and one bill.</p>
+  <div class="foot"><b>docs.dtelecom.org</b><span>rooms · speech-to-text · text-to-speech · agents</span></div>
+</div>
+</body>
+</html>

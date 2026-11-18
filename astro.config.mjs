@@ -38,6 +38,7 @@ const redirects = {
 	'/llm-resources': '/reference/llm-resources/',
 };
 const withBase = (p) => (base.replace(/\/$/, '') + p).replace(/^$/, '/');
+const ogImage = new URL(withBase('/og.png'), site).href;
 
 export default defineConfig({
 	site,
@@ -53,7 +54,13 @@ export default defineConfig({
 			description: 'Real-time voice, video and speech AI behind one API key and one bill.',
 			favicon: '/favicon.png',
 			head: [
-				{ tag: 'link', attrs: { rel: 'icon', href: withBase('/favicon.ico'), sizes: '16x16' } },
+				{ tag: 'link', attrs: { rel: 'icon', href: withBase('/favicon.ico'), sizes: '32x32' } },
+				// link previews (Slack, X, LinkedIn): public/og.png, 1200x630
+				{ tag: 'meta', attrs: { property: 'og:image', content: ogImage } },
+				{ tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
+				{ tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
+				{ tag: 'meta', attrs: { property: 'og:image:alt', content: 'dTelecom Cloud developer docs' } },
+				{ tag: 'meta', attrs: { name: 'twitter:image', content: ogImage } },
 				...(noindex ? [{ tag: 'meta', attrs: { name: 'robots', content: 'noindex, nofollow' } }] : []),
 			],
 			sidebar,
