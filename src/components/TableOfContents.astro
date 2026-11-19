@@ -1,0 +1,71 @@
+---
+// Starlight's outline plus a fix for its last entries: when the page cannot scroll far enough
+// for the final headings to reach the top, the scroll-spy never selects them.
+import Default from '@astrojs/starlight/components/TableOfContents.astro';
+---
+
+<Default><slot /></Default>
+
+<script>
+	const toc = () => document.querySelector('starlight-toc');
+	const links = () => [...(toc()?.querySelectorAll<HTMLAnchorElement>('a') ?? [])];
+	const headingOf = (link: HTMLAnchorElement) => document.getElementById(decodeURIComponent(link.hash.slice(1)));
+
+	let pinned: HTMLAnchorElement | null = null;
+
+	function mark(link: HTMLAnchorElement) {
+		// only touch what differs, so our own change does not retrigger the observer forever
+		for (const a of links()) {
+			if (a === link) {
+				if (a.getAttribute('aria-current') !== 'true') a.setAttribute('aria-current', 'true');
+			} else if (a.hasAttribute('aria-current')) a.removeAttribute('aria-current');
+		}
+	}
+	const atBottom = () => window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+
+	function sync() {
+		const all = links();
+		if (!all.length) return;
+		if (pinned) return mark(pinned);
+		if (atBottom() && document.documentElement.scrollHeight > window.innerHeight) {
+			const last = all[all.length - 1];
+			const h = headingOf(last);
+			if (h && h.getBoundingClientRect().top < window.innerHeight) mark(last);
+		}
+	}
+
+	function init() {
+		const el = toc();
+		if (!el) return;
+		el.addEventListener('click', (e) => {
+			const a = (e.target as Element).closest('a');
+			if (!a || !a.hash) return;
+			pinned = a as HTMLAnchorElement;
+			mark(pinned);
+		});
+		// the user takes over the scroll: back to the normal scroll-spy
+		const release = () => {
+			pinned = null;
+		};
+		window.addEventListener('wheel', release, { passive: true });
+		window.addEventListener('touchmove', release, { passive: true });
+		window.addEventListener('keydown', release);
+		window.addEventListener('pointerdown', (e) => {
+			if (!el.contains(e.target as Node)) release();
+		});
+		// Starlight's observer rewrites aria-current: re-apply ours when it does
+		new MutationObserver(sync).observe(el, { attributes: true, attributeFilter: ['aria-current'], subtree: true });
+		let raf = 0;
+		window.addEventListener(
+			'scroll',
+			() => {
+				cancelAnimationFrame(raf);
+				raf = requestAnimationFrame(sync);
+			},
+			{ passive: true },
+		);
+		sync();
+	}
+	if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+	else init();
+</script>

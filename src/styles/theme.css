@@ -56,7 +56,9 @@
 	--sl-nav-height: 58px;
 	--sl-nav-pad-x: 20px;
 	--sl-sidebar-width: 264px;
-	--sl-content-width: 760px;
+	/* wider column: the "On this page" outline takes the leftover space (Starlight splits it
+	   between the two), so a larger value moves the outline to the right */
+	--sl-content-width: 960px;
 	--sl-line-height: 1.65;
 	--sl-text-body: 15.5px;
 }
@@ -188,6 +190,10 @@ starlight-toc nav h2 {
 }
 
 /* ---- the reading column ---- */
+/* no anchor (chain) icon next to headings; the headings keep their ids */
+.sl-anchor-link {
+	display: none;
+}
 .sl-markdown-content {
 	font-size: 15.5px;
 	line-height: 1.65;
@@ -200,7 +206,7 @@ starlight-toc nav h2 {
 	text-decoration: underline;
 }
 .sl-markdown-content :is(p, li):not(:where(.not-content *)) {
-	max-width: 68ch;
+	max-width: none;
 }
 /* h2 sits in Starlight's anchor-link wrapper: the rule above it goes on the wrapper */
 .sl-markdown-content .sl-heading-wrapper.level-h2 {
@@ -240,12 +246,16 @@ starlight-toc nav h2 {
 }
 
 /* tables in a rounded frame, scrolling on narrow screens */
-.sl-markdown-content table:not(:where(.not-content *)) {
-	display: block;
+.sl-markdown-content .table-frame {
 	overflow-x: auto;
-	width: 100%;
+	margin: 1rem 0;
 	border: 1px solid var(--line);
 	border-radius: 10px;
+}
+.sl-markdown-content table:not(:where(.not-content *)) {
+	display: table;
+	width: 100%;
+	margin: 0;
 	border-collapse: separate;
 	border-spacing: 0;
 	font-size: 14.5px;
@@ -327,6 +337,25 @@ footer .meta {
 }
 starlight-toc nav > ul > li:first-child:has(> a[href='#_top']) {
 	display: none;
+}
+
+/* smaller, subtler copy button */
+.expressive-code .copy {
+	inset-block-start: calc(var(--ec-brdWd) + 0.4rem);
+	inset-inline-end: calc(var(--ec-brdWd) + 0.4rem);
+}
+.expressive-code .copy button {
+	border-radius: 6px;
+	/* solid, so code running under the button doesn't show through */
+	background: var(--code-bg);
+	width: 1.75rem;
+	height: 1.75rem;
+}
+.expressive-code .copy button::after {
+	margin: 0.4rem;
+}
+.expressive-code .copy button:hover::after {
+	background-color: var(--code-text);
 }
 
 /* code shows the characters as typed: no ligatures such as => becoming an arrow */

@@ -54,6 +54,25 @@ export default function remarkDocs({ base, contentDir }) {
 		};
 		walk(tree, null, 0);
 
+		// Tables go in a scrolling frame, so header, rows and borders always span the full width.
+		const frameTables = (node) => {
+			if (!node.children) return;
+			for (let i = 0; i < node.children.length; i++) {
+				const child = node.children[i];
+				if (child.type === 'table') {
+					node.children.splice(
+						i,
+						1,
+						{ type: 'html', value: '<div class="table-frame">' },
+						child,
+						{ type: 'html', value: '</div>' },
+					);
+					i += 2;
+				} else frameTables(child);
+			}
+		};
+		frameTables(tree);
+
 		// The title comes from front matter and is rendered by PageTitle: drop the duplicate H1.
 		const first = tree.children.findIndex((n) => n.type !== 'yaml');
 		if (first >= 0 && tree.children[first].type === 'heading' && tree.children[first].depth === 1) {
