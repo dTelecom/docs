@@ -71,7 +71,7 @@ The current rate table is also in the dashboard under **Billing**.
 | --- | --- | --- | --- | --- | --- |
 | Price per month | $0 | $49 | $199 | $499 | by agreement |
 | Included usage per month | $10 (10,000 cr) | $60 (60,000 cr) | $250 (250,000 cr) | $700 (700,000 cr) | by agreement |
-| Concurrent participants | 10 | 50 | 200 | 500 | by agreement |
+| Concurrent participants | 100 | 1,000 | 2,500 | 5,000 | by agreement |
 | Requests per second | 5 | 20 | 50 | 100 | by agreement |
 | Top-up discount | 0% | 5% | 10% | 15% | 25% |
 | Card required | no | yes | yes | yes | - |

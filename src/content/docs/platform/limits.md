@@ -11,7 +11,7 @@ Plan limits apply to the whole organization and are shared by all its projects.
 
 | | Free | Starter | Growth | Scale | Enterprise |
 | --- | --- | --- | --- | --- | --- |
-| Concurrent participants | 10 | 50 | 200 | 500 | by agreement |
+| Concurrent participants | 100 | 1,000 | 2,500 | 5,000 | by agreement |
 | Requests per second | 5 | 20 | 50 | 100 | by agreement |
 
 Your current limits are in the dashboard under **Settings > Quota and limits**. For higher limits, upgrade the plan or contact `enterprise@dtelecom.org`.

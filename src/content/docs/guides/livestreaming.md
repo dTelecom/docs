@@ -133,7 +133,7 @@ For steady, large audiences the [bandwidth add-on](../platform/billing.md#bandwi
 
 - Up to 1,000 participants per room, on every plan.
 - Every viewer is a concurrent participant. The slot is taken when the token is issued, not when the viewer connects, and an unused token holds it until it expires.
-- Concurrent participants by plan: Free 10, Starter 50, Growth 200, Scale 500, Enterprise by agreement. The example with one host and 200 viewers is 201 participants, so it needs Scale. See [Limits](../platform/limits.md).
+- Concurrent participants by plan: Free 100, Starter 1,000, Growth 2,500, Scale 5,000, Enterprise by agreement. The example with one host and 200 viewers is 201 participants, so it needs Starter. See [Limits](../platform/limits.md).
 
 ## Broadcast from OBS
 

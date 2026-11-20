@@ -71,7 +71,7 @@ app.listen(3000, () => console.log('Open http://localhost:3000'));
 
 `createToken` checks your balance and limits, picks a node for the participant and returns two values the client needs: `token` and `wsUrl`. The room is created when the first participant joins.
 
-Every token takes one of your plan's concurrent participant slots from the moment it is issued until the participant leaves or the token expires. The Free plan has 10. A token lasts 6 hours by default, and that is the lifetime we recommend. A token that nobody uses holds its slot until it expires, so issue tokens right before joining.
+Every token takes one of your plan's concurrent participant slots from the moment it is issued until the participant leaves or the token expires. The Free plan has 100. A token lasts 6 hours by default, and that is the lifetime we recommend. A token that nobody uses holds its slot until it expires, so issue tokens right before joining.
 
 ## 4. Join the room from the browser
 
